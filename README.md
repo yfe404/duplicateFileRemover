@@ -1,0 +1,4 @@
+duplicateFileRemover
+====================
+
+Duplicate File Remover
