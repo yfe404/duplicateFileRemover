@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR=$1
+DIR=$*
 FILES=`find $DIR -type f -user $USER 2> /dev/null | tr "\n" " "`
 
 rm  pathnames.db 2> /dev/null
