@@ -2,34 +2,61 @@
 #include <QFileInfo>
 #include <QStringList>
 #include <QDateTime>
+#include <QCoreApplication>
+#include <QtSql>
 #include<fstream>
 
 #define DB_SEP ':'                  // séparateur dans le fichier qui servira de base de donnée en attendant sqlite
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
 #define UPDATER_EXECUTABLE "./update.sh " // l'espace est volontaire est important (il y aura des arguments !)
+#define DATABASE_CREATOR_EXECUTABLE "./create_database.sh "
+
+#define DATABASENAME string(string(getenv("USER")) + ".db")
+#define TABLENAME string("files")
+#define USER string(getenv("USER"))
+
+//La macro-définition q2c est simplement faite pour faciliter la conversion de QString vers std::string
+#define q2c(string) string.toStdString()
+
+
 
 using namespace std;
 
 
-void menu();
+
 void init(void);
+void menu();
 void update(void);
 void afficherAide(void);
 void lister(void);
 
 
 
-int main()
+int main(int countArg, char **listArg)
 {
+    QCoreApplication app(countArg, listArg);
+
     init();
     menu();
-    return 0;
+
+    return app.exec();
 }
 
 
 void init(void)
 {
-    system("chmod +x update.sh");
+
+    string cmd1 = string("chmod +x ") + DATABASE_CREATOR_EXECUTABLE + UPDATER_EXECUTABLE;
+    std::cout<<cmd1<<endl;
+    system(cmd1.c_str());
+
+    string cmd2 = DATABASE_CREATOR_EXECUTABLE + DATABASENAME + ' ' + TABLENAME + string(" 2> /dev/null");
+    std::cout<<cmd2<<endl;
+    if(system(cmd2.c_str()) == -1)
+    {
+        cerr<<"Can't create database !"<<endl;
+    }
+
 }
 
 void update(void)
@@ -38,7 +65,7 @@ void update(void)
     ifstream config(CONFIGFILE);
     if(!config)
     {
-        cerr<<"Erreur ouverture fichier : md5.db"<<endl;
+        cerr<<"Erreur ouverture fichier de configuration"<<endl;
     }
     string parcours_configfile;
     string cmd = UPDATER_EXECUTABLE ;             // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
@@ -64,7 +91,7 @@ void update(void)
     }
 
     string filepath;
-    string key;
+    string md5Key;
     ifstream pathnames("pathnames.db");
     if(!pathnames)
     {
@@ -79,34 +106,57 @@ void update(void)
     }
 
     getline(pathnames, filepath);
-    getline(md5sum, key);
+    getline(md5sum, md5Key);
 
-    ofstream output("database.db");
-    if(!output)
+
+
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setHostName("localhost");
+    db.setUserName(QString(USER.c_str()));
+    db.setPassword("");
+    db.setDatabaseName(QString(DATABASENAME.c_str()));
+    if(db.open())
     {
-        cerr<<"Erreur ouverture fichier : database.db"<<endl;
+        std::cout << "Vous êtes maintenant connecté à " << q2c(db.hostName()) << std::endl;
+    }
+    else
+    {
+        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(db.lastError().text()) << std::endl;
     }
 
 
     while(filepath.size() != 0)
     {
 
-        string line;
+        QSqlQuery q;
         QFileInfo fichier(filepath.c_str());
 
-        line += filepath + DB_SEP +
-                fichier.baseName().toStdString() + DB_SEP +
-                fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss").toStdString() + DB_SEP +
-                key;
 
-        output << line << std::endl;
+        q.prepare("insert into " + QString(TABLENAME.c_str()) + " values (?, ?, ?, ?)");
+        q.addBindValue(QString(filepath.c_str()));
+        q.addBindValue(fichier.baseName());
+        q.addBindValue(fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss"));
+        q.addBindValue(QString(md5Key.c_str()));
 
         getline(pathnames, filepath);
-        getline(md5sum, key);
+        getline(md5sum, md5Key);
+
+        if (q.exec())
+        {
+            //std::cout << "Ça marche ! :)" << std::endl;
+        }
+        else
+        {
+            std::cerr << "Erreur ajout base de données" << std::endl;
+        }
+
+
     }
 
     system("rm pathnames.db 2> /dev/null");
     system("rm md5.db 2> /dev/null");
+
+    db.close();
 
 
 } // ferme automatiquement tous les flux
@@ -115,24 +165,35 @@ void update(void)
 
 void lister(void)
 {
-    ifstream database("database.db");
 
-    if(!database)
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setHostName("localhost");
+    db.setUserName(QString(USER.c_str()));
+    db.setPassword("");
+    db.setDatabaseName(QString(DATABASENAME.c_str()));
+    if(db.open())
     {
-        cerr<<"Erreur ouverture fichier : database.db"<<endl;
+        std::cout << "Vous êtes maintenant connecté à " << q2c(db.hostName()) << std::endl;
+    }
+    else
+    {
+        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(db.lastError().text()) << std::endl;
     }
 
-    string line;
-    string notDisplayed;
-    getline(database, line, DB_SEP);            // récupère une chaine de caractère jusqu'au ':' càd le nom du fichier (cat database.db)
-    getline(database,notDisplayed );            // récupère le reste de la ligne que nous n'afficherons pas pour positionner le curseur dans le fichier sur l'entrée suivante
-
-    while(line.size() != 0)
+    QSqlQuery query;
+    if(query.exec("SELECT filepath FROM " + QString(TABLENAME.c_str())))
     {
-        cout<<line<<endl;
-        getline(database, line, DB_SEP);
-        getline(database,notDisplayed );
+        while(query.next())
+        {
+            std::cout << "    Nouvelle entrée" << std::endl;
+            for(int x=0; x < query.record().count(); ++x)
+            {
+                std::cout << "        " << query.record().fieldName(x).toStdString() << " = " << query.value(x).toString().toStdString() << std::endl;
+            }
+        }
     }
+
+    db.close();
 
 }
 
@@ -159,7 +220,7 @@ void menu()
             afficherAide();
         break;
         case 'q' :
-            return;
+            // quitter
         break;
         default:
             cout<<choix<<" : commande inconnue"<<endl;
