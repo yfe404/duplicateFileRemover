@@ -4,7 +4,9 @@
 #include <QDateTime>
 #include<fstream>
 
-#define DB_SEP ':'
+#define DB_SEP ':'                  // séparateur dans le fichier qui servira de base de donnée en attendant sqlite
+#define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
+#define UPDATER_EXECUTABLE "./update.sh " // l'espace est volontaire est important (il y aura des arguments !)
 
 using namespace std;
 
@@ -33,7 +35,30 @@ void init(void)
 void update(void)
 {
 
-    if(system("./update.sh /tmp")==-1)
+    ifstream config(CONFIGFILE);
+    if(!config)
+    {
+        cerr<<"Erreur ouverture fichier : md5.db"<<endl;
+    }
+    string parcours_configfile;
+    string cmd = UPDATER_EXECUTABLE ;             // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+
+
+    getline(config, parcours_configfile);
+    if(parcours_configfile.size() == 0)
+    {
+        cerr<<"Fichier de configuration vide !"<<endl;
+    }
+
+
+    while(parcours_configfile.size() != 0)
+    {
+        cmd += parcours_configfile + ' ';
+        getline(config, parcours_configfile);
+    }
+
+
+    if(system(cmd.c_str())==-1)
     {
         cerr<<"Erreur execution fichier : update.sh"<<endl;
     }
