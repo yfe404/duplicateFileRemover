@@ -27,8 +27,6 @@
 using namespace std;
 
 
-
-void init();
 void menu();
 void update();
 void afficherAide();
@@ -40,32 +38,11 @@ int main(int countArg, char **listArg)
 {
     QCoreApplication app(countArg, listArg);
 
-    init();
     menu();
 
     return app.exec();
 }
 
-/**
-  @brief Création de la base de données
-*/
-void init()
-{
-
-    /** Changement des droits sur les scripts afin que l'on puisse les exécuter */
-    string cmd1 = string("chmod +x ") + DATABASE_CREATOR_EXECUTABLE + UPDATER_EXECUTABLE;
-    std::cout<<cmd1<<endl;
-    system(cmd1.c_str()); // CODERET À TESTER
-
-    /* Passera dans le constructeur de DataBase */
-    string cmd2 = DATABASE_CREATOR_EXECUTABLE + DATABASENAME + ' ' + TABLENAME + string(" 2> /dev/null");
-    std::cout<<cmd2<<endl;
-    if(system(cmd2.c_str()) == -1)
-    {
-        cerr<<"Can't create database !"<<endl;
-    }
-
-}
 
 
 
