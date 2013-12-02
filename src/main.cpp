@@ -11,7 +11,7 @@
 #define UPDATER_EXECUTABLE "./update.sh " // l'espace est volontaire est important (il y aura des arguments !)
 #define DATABASE_CREATOR_EXECUTABLE "./create_database.sh "
 
-#define DATABASENAME string(string(getenv("USER")) + ".db")
+#define DATABASENAME string(string(getenv("USER")) + ".db") // N.B : pour utiliser getenv en-dehors du define, il faut inclure cstdlib
 #define TABLENAME string("files")
 #define USER string(getenv("USER"))
 
@@ -24,11 +24,11 @@ using namespace std;
 
 
 
-void init(void);
+void init();
 void menu();
-void update(void);
-void afficherAide(void);
-void lister(void);
+void update();
+void afficherAide();
+void lister();
 
 
 
@@ -43,12 +43,12 @@ int main(int countArg, char **listArg)
 }
 
 
-void init(void)
+void init()
 {
 
     string cmd1 = string("chmod +x ") + DATABASE_CREATOR_EXECUTABLE + UPDATER_EXECUTABLE;
     std::cout<<cmd1<<endl;
-    system(cmd1.c_str());
+    system(cmd1.c_str()); // CODERET À TESTER
 
     string cmd2 = DATABASE_CREATOR_EXECUTABLE + DATABASENAME + ' ' + TABLENAME + string(" 2> /dev/null");
     std::cout<<cmd2<<endl;
@@ -59,7 +59,7 @@ void init(void)
 
 }
 
-void update(void)
+void update()
 {
 
     ifstream config(CONFIGFILE);
@@ -153,7 +153,7 @@ void update(void)
 
     }
 
-    system("rm pathnames.db 2> /dev/null");
+    system("rm pathnames.db 2> /dev/null"); // WARNING VALEUR DE RETOUR AUX DEUX APPELS
     system("rm md5.db 2> /dev/null");
 
     db.close();
@@ -163,7 +163,7 @@ void update(void)
 
 
 
-void lister(void)
+void lister()
 {
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
@@ -208,7 +208,7 @@ void menu()
     while(choix!='q')
     {
         cout<<"Commande (m pour l'aide): ";
-        scanf("%c%*c", &choix);                  // Problème : si l'utilisateur entre une chaine de caractères, pas géré !
+        scanf("%c%*c", &choix); // CODERET A GERER (réglerait le problème qui suit ?)  // Problème : si l'utilisateur entre une chaine de caractères, pas géré !
         switch(choix)
         {
         case 'l' :
@@ -231,7 +231,7 @@ void menu()
 }
 
 
-void afficherAide(void)
+void afficherAide()
 {
     cout<<"Commande d'action"<<endl<<
     "   l   lister les fichiers (sera remplacé par doublons) du dossier passé en paramètre"<<endl<<
