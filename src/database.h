@@ -14,14 +14,15 @@ class DataBase : public QSqlDatabase
 {
 private:
     static std::string dataBaseCreator;
-    static std::string updater;
 
     DataBase();
     DataBase (const DataBase&); /// Constructeur de copie (non-implémenté car singleton)
     void operator =(const DataBase&); /// Pour la meme raison que le constructeur de copie, l'opérateur de coppie ne sera pas implémenté
 public:
+    // ATTRIBUTS PUBLICS A MODIFIER (fait dans un premier temps dans un but de simplification)
     static std::string tableName;
     static std::string name;
+    static std::string updater;
 
     static DataBase& instance(){
         static DataBase instance; /// instance statique car crée une seule fois

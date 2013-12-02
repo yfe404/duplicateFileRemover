@@ -12,11 +12,6 @@
 #define DB_SEP ':'  // A SUPPRIMER ? (comme on utilise sqlite3 désormais)      // séparateur dans le fichier qui servira de base de donnée en attendant sqlite
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
 
-#define UPDATER_EXECUTABLE "./update.sh " // l'espace est volontaire est important (il y aura des arguments !)
-#define DATABASE_CREATOR_EXECUTABLE "./create_database.sh "
-
-#define DATABASENAME string(string(getenv("USER")) + ".db") // N.B : pour utiliser getenv en-dehors du define, il faut inclure cstdlib
-#define TABLENAME string("files")
 #define USER string(getenv("USER"))
 
 //La macro-définition q2c est simplement faite pour faciliter la conversion de QString vers std::string
@@ -55,7 +50,7 @@ void update() // MÉTHODE À RAPETISSIR !!
         cerr<<"Erreur ouverture fichier de configuration"<<endl;
     }
     string parcours_configfile;
-    string cmd = UPDATER_EXECUTABLE ;   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+    string cmd = DataBase::instance().updater;   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
 
 
     getline(config, parcours_configfile);
@@ -96,39 +91,42 @@ void update() // MÉTHODE À RAPETISSIR !!
     getline(md5sum, md5Key);
 
 
+    /** Paramétrage de la base de données */ // DANS LE CONSTRUCTEUR ?
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE"); // CREATION DE LA BD A VIRER (car singleton)
-    db.setHostName("localhost");
-    db.setUserName(QString(USER.c_str()));
-    db.setPassword("");
-    db.setDatabaseName(QString(DATABASENAME.c_str()));
-    if(db.open())
+    DataBase::instance().addDatabase("QSQLITE");
+    DataBase::instance().setHostName("localhost");
+    DataBase::instance().setUserName(QString(USER.c_str()));
+    DataBase::instance().setPassword("");
+    DataBase::instance().setDatabaseName(QString(DataBase::instance().name.c_str())); // SYNTAXE A ALLEGER !! (pas beau !)
+
+
+    if(DataBase::instance().open()) /// si la connexion est réussie
     {
-        std::cout << "Vous êtes maintenant connecté à " << q2c(db.hostName()) << std::endl;
+        std::cout << "Vous êtes maintenant connecté à " << q2c(DataBase::instance().hostName()) << std::endl;
     }
     else
     {
-        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(db.lastError().text()) << std::endl;
+        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(DataBase::instance().lastError().text()) << std::endl;
     }
 
 
     while(filepath.size() != 0)
     {
 // ici : méthode de DataBase
-        QSqlQuery q;
+        QSqlQuery requete;
         QFileInfo fichier(filepath.c_str());
 
 
-        q.prepare("insert into " + QString(TABLENAME.c_str()) + " values (?, ?, ?, ?)");
-        q.addBindValue(QString(filepath.c_str()));
-        q.addBindValue(fichier.baseName());
-        q.addBindValue(fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss"));
-        q.addBindValue(QString(md5Key.c_str()));
+        requete.prepare("insert into " + QString(DataBase::instance().tableName.c_str()) + " values (?, ?, ?, ?)");
+        requete.addBindValue(QString(filepath.c_str()));
+        requete.addBindValue(fichier.baseName());
+        requete.addBindValue(fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss"));
+        requete.addBindValue(QString(md5Key.c_str()));
 
         getline(pathnames, filepath);
         getline(md5sum, md5Key);
 
-        if (q.exec())
+        if (requete.exec())
         {
             //std::cout << "Ça marche ! :)" << std::endl;
         }
@@ -143,7 +141,7 @@ void update() // MÉTHODE À RAPETISSIR !!
     system("rm pathnames.db 2> /dev/null"); // WARNING VALEUR DE RETOUR AUX DEUX APPELS
     system("rm md5.db 2> /dev/null");
 
-    db.close();
+    DataBase::instance().close();
 
 
 } // ferme automatiquement tous les flux
@@ -152,35 +150,36 @@ void update() // MÉTHODE À RAPETISSIR !!
 
 void lister()
 {
+    /** Paramétrage de la base de données */ // DANS LE CONSTRUCTEUR ?
+    DataBase::instance().addDatabase("QSQLITE");
+    DataBase::instance().setHostName("localhost");
+    DataBase::instance().setUserName(QString(USER.c_str()));
+    DataBase::instance().setPassword("");
+    DataBase::instance().setDatabaseName(QString(DataBase::instance().name.c_str()));
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE"); // CREATION DANS LE SINGLETON
-    db.setHostName("localhost");
-    db.setUserName(QString(USER.c_str()));
-    db.setPassword("");
-    db.setDatabaseName(QString(DATABASENAME.c_str()));
-    if(db.open())
+    if(DataBase::instance().open())
     {
-        std::cout << "Vous êtes maintenant connecté à " << q2c(db.hostName()) << std::endl;
+        cout << "Vous êtes maintenant connecté à " << q2c(DataBase::instance().hostName()) << endl;
     }
     else
     {
-        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(db.lastError().text()) << std::endl;
+        cout << "La connexion a échouée, désolé :(" << std::endl << q2c(DataBase::instance().lastError().text()) << endl;
     }
 
     QSqlQuery query;
-    if(query.exec("SELECT filepath FROM " + QString(TABLENAME.c_str())))
+    if(query.exec("SELECT filepath FROM " + QString(DataBase::instance().tableName.c_str())))
     {
         while(query.next())
         {
-            std::cout << "    Nouvelle entrée" << std::endl;
+            cout << "    Nouvelle entrée" << std::endl;
             for(int x=0; x < query.record().count(); ++x)
             {
-                std::cout << "        " << query.record().fieldName(x).toStdString() << " = " << query.value(x).toString().toStdString() << std::endl;
+                cout << "        " << query.record().fieldName(x).toStdString() << " = " << query.value(x).toString().toStdString() << endl;
             }
         }
     }
 
-    db.close();
+    DataBase::instance().close();
 
 }
 
