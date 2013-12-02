@@ -1,13 +1,17 @@
 #include <iostream>
+#include<fstream>
+
 #include <QFileInfo>
 #include <QStringList>
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QtSql>
-#include<fstream>
 
-#define DB_SEP ':'                  // séparateur dans le fichier qui servira de base de donnée en attendant sqlite
+#include "database.h"
+
+#define DB_SEP ':'  // A SUPPRIMER ? (comme on utilise sqlite3 désormais)      // séparateur dans le fichier qui servira de base de donnée en attendant sqlite
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
+
 #define UPDATER_EXECUTABLE "./update.sh " // l'espace est volontaire est important (il y aura des arguments !)
 #define DATABASE_CREATOR_EXECUTABLE "./create_database.sh "
 
@@ -42,14 +46,18 @@ int main(int countArg, char **listArg)
     return app.exec();
 }
 
-
+/**
+  @brief Création de la base de données
+*/
 void init()
 {
 
+    /** Changement des droits sur les scripts afin que l'on puisse les exécuter */
     string cmd1 = string("chmod +x ") + DATABASE_CREATOR_EXECUTABLE + UPDATER_EXECUTABLE;
     std::cout<<cmd1<<endl;
     system(cmd1.c_str()); // CODERET À TESTER
 
+    /* Passera dans le constructeur de DataBase */
     string cmd2 = DATABASE_CREATOR_EXECUTABLE + DATABASENAME + ' ' + TABLENAME + string(" 2> /dev/null");
     std::cout<<cmd2<<endl;
     if(system(cmd2.c_str()) == -1)
@@ -59,7 +67,9 @@ void init()
 
 }
 
-void update()
+
+
+void update() // MÉTHODE À RAPETISSIR !!
 {
 
     ifstream config(CONFIGFILE);
@@ -68,7 +78,7 @@ void update()
         cerr<<"Erreur ouverture fichier de configuration"<<endl;
     }
     string parcours_configfile;
-    string cmd = UPDATER_EXECUTABLE ;             // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+    string cmd = UPDATER_EXECUTABLE ;   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
 
 
     getline(config, parcours_configfile);
@@ -110,7 +120,7 @@ void update()
 
 
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE"); // CREATION DE LA BD A VIRER (car singleton)
     db.setHostName("localhost");
     db.setUserName(QString(USER.c_str()));
     db.setPassword("");
@@ -127,7 +137,7 @@ void update()
 
     while(filepath.size() != 0)
     {
-
+// ici : méthode de DataBase
         QSqlQuery q;
         QFileInfo fichier(filepath.c_str());
 
@@ -166,7 +176,7 @@ void update()
 void lister()
 {
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE"); // CREATION DANS LE SINGLETON
     db.setHostName("localhost");
     db.setUserName(QString(USER.c_str()));
     db.setPassword("");
