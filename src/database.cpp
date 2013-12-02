@@ -15,6 +15,12 @@ string DataBase::name = (string(getenv("USER")) + ".db");
 string DataBase::tableName = "files";
 
 
+/**
+  @brief Constructeur de la classe Singleton DataBase
+  change les droits des scripts qui vont etre executes et cree la base de données
+  Grâce au pattern Singleton, il ne sera qu'une seule et unique fois (au premier appel d'une instance de DataBase)
+  Ce pattern est utilisé car chaque utilisateur utilisant ce programme aura une seule et unique base de données contenant les informations sur ses fichiers
+*/
 DataBase::DataBase()
 {
     /** Changement des droits sur les scripts afin que l'on puisse les exécuter */

@@ -94,13 +94,16 @@ void update() // MÉTHODE À RAPETISSIR !!
     /** Paramétrage de la base de données */ // DANS LE CONSTRUCTEUR ?
 
     DataBase::instance().addDatabase("QSQLITE");
+
     DataBase::instance().setHostName("localhost");
     DataBase::instance().setUserName(QString(USER.c_str()));
     DataBase::instance().setPassword("");
-    DataBase::instance().setDatabaseName(QString(DataBase::instance().name.c_str())); // SYNTAXE A ALLEGER !! (pas beau !)
+    DataBase::instance().setDatabaseName( QString( (DataBase::instance().name).c_str() ) ); // SYNTAXE A ALLEGER !! (pas beau !)
+
+    cout << "La base s'appelle : " << DataBase::instance().name.c_str() << endl;
 
 
-    if(DataBase::instance().open()) /// si la connexion est réussie
+    if( DataBase::instance().open() ) // PB : CONNEXION MARCHE PLUS ! => ERREUR DE PARENTHÈSE ? /// si la connexion est réussie
     {
         std::cout << "Vous êtes maintenant connecté à " << q2c(DataBase::instance().hostName()) << std::endl;
     }
@@ -112,7 +115,7 @@ void update() // MÉTHODE À RAPETISSIR !!
 
     while(filepath.size() != 0)
     {
-// ici : méthode de DataBase
+// ici : méthode de DataBase => addFile(string filePath);
         QSqlQuery requete;
         QFileInfo fichier(filepath.c_str());
 
@@ -155,9 +158,9 @@ void lister()
     DataBase::instance().setHostName("localhost");
     DataBase::instance().setUserName(QString(USER.c_str()));
     DataBase::instance().setPassword("");
-    DataBase::instance().setDatabaseName(QString(DataBase::instance().name.c_str()));
+    DataBase::instance().setDatabaseName( QString( DataBase::instance().name.c_str() ) );
 
-    if(DataBase::instance().open())
+    if( DataBase::instance().open() )
     {
         cout << "Vous êtes maintenant connecté à " << q2c(DataBase::instance().hostName()) << endl;
     }
@@ -194,7 +197,7 @@ void menu()
     while(choix!='q')
     {
         cout<<"Commande (m pour l'aide): ";
-        scanf("%c%*c", &choix); // CODERET A GERER (réglerait le problème qui suit ?)  // Problème : si l'utilisateur entre une chaine de caractères, pas géré !
+        scanf("%c%*c", &choix); // CODERET A GERER (réglerait le problème qui suit ?)  // Problème : si l'utilisateur entre une chaine de caractères, pas géré ! => prend 1car/2 de la chaine (alors qu'il faudrait mettre un message d'erreur !)
         switch(choix)
         {
         case 'l' :
@@ -206,7 +209,7 @@ void menu()
             afficherAide();
         break;
         case 'q' :
-            // quitter
+            // quitte (COMMENT ? CAR APP.EXEC() A LA FIN DU MAIN !);
         break;
         default:
             cout<<choix<<" : commande inconnue"<<endl;
