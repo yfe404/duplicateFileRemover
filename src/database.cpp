@@ -1,18 +1,29 @@
 #include <string>
 #include <iostream>
 
+#include <QSqlDatabase>
+#include <QtSql>
+
 #include "database.h"
+
+
+#define q2c(string) string.toStdString()
+
 
 using std::string;
 using std::cout;
 using std::endl;
 using std::cerr;
 
+
+
+
 /** Définition des variables de classes */
 string DataBase::dataBaseCreator = "./create_database.sh "; /// pour les scripts, l'espace avant les " est volontaire car les scripts prendront des arguments
-string DataBase::updater = "./update.sh ";
-string DataBase::name = (string(getenv("USER")) + ".db");
-string DataBase::tableName = "files";
+string DataBase::m_updater = "./update.sh ";
+string DataBase::m_name = (string(getenv("USER")) + ".db");
+string DataBase::m_tableName = "files";
+
 
 
 /**
@@ -23,18 +34,72 @@ string DataBase::tableName = "files";
 */
 DataBase::DataBase()
 {
+    father = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
+
     /** Changement des droits sur les scripts afin que l'on puisse les exécuter */
-    string cmd1 = string("chmod +x ") + dataBaseCreator + updater;
+    string cmd1 = string("chmod +x ") + dataBaseCreator + m_updater;
     cout<< cmd1 <<endl;
     system(cmd1.c_str()); // CODERET À TESTER
 
     /** Appel du script pour créer la base de données sqlite */
-    string cmd2 = dataBaseCreator + name + ' ' + tableName + string(" 2> /dev/null");
+    string cmd2 = dataBaseCreator + m_name + ' ' + m_tableName + string(" 2> /dev/null");
     cout<<cmd2<<endl;
     if(system(cmd2.c_str()) == -1)
     {
         cerr<<"Can't create database !"<<endl;
     }
 
+    /** Paramétrage de la base de données */
+    father->setHostName("localhost");
+    father->setUserName( QString( getenv("USER")) );
+    father->setPassword("");
+    father->setDatabaseName( QString( m_name.c_str() ) );
+
+    cout << "La base s'appelle : " << m_name << endl;
+
+
+    if( father->open() ) // PB : CONNEXION MARCHE PLUS ! => ERREUR DE PARENTHÈSE ? /// si la connexion est réussie
+    {
+        std::cout << "Vous êtes maintenant connecté à " << q2c(father->hostName()) << std::endl;
+    }
+    else
+    {
+        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(father->lastError().text()) << std::endl;
+    }
+
+
 }
+
+
+/**
+  @brief ouverture de la base de données
+
+  @return true la base est ouverte
+  @return false il y a eu un problème durant l'ouverture
+*/
+bool DataBase::ouvrirDB(){
+    return father->open(); /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
+}
+
+
+/**
+  @brief Fermeture de la base de données
+    Ferme la connexion à la base de données, libérant toutes les ressources acquises, et rendant invalide tout objet QQuery utilisant la base.
+*/
+void DataBase::fermerDB(){
+    father->close();
+}
+
+
+
+/**
+  @brief Destructeur
+  Détruit le père (QSqlDatabase)
+*/
+DataBase::~DataBase()
+{
+    delete father;
+}
+
+
 

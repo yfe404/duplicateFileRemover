@@ -3,17 +3,18 @@
 
 #include <string>
 
-#include <QSqlDatabase>
-
 /**
  @class DataBase
  @brief classe singleton, héritant de QSqlDatabase, nous permettant de manipuler la base de données sqlite3
 */
 
-class DataBase : public QSqlDatabase
+class QSqlDatabase;
+class DataBase
 {
 private:
     static std::string dataBaseCreator;
+    QSqlDatabase* father; // passé en argument car, si on hérite, la connexion ne marche plus (A VOIR !)
+
 
     /**
       @brief Les constructeurs/opérateurs de copie.
@@ -22,11 +23,14 @@ private:
     DataBase();
     DataBase (const DataBase&); /// Constructeur de copie (non-implémenté car singleton)
     void operator =(const DataBase&); /// Pour la meme raison que le constructeur de copie, l'opérateur de coppie ne sera pas implémenté
+
 public:
     // ATTRIBUTS PUBLICS A MODIFIER (fait dans un premier temps dans un but de simplification)
-    static std::string tableName;
-    static std::string name;
-    static std::string updater;
+    static std::string m_tableName;
+    static std::string m_name;
+    static std::string m_updater;
+
+
 
     /**
       @brief Récupère l'instance de la base de données existante
@@ -36,6 +40,11 @@ public:
         static DataBase instance;
         return instance;
     }
+
+    bool ouvrirDB();
+    void fermerDB();
+
+    ~DataBase();
 };
 
 /**

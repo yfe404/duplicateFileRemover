@@ -50,7 +50,7 @@ void update() // MÉTHODE À RAPETISSIR !!
         cerr<<"Erreur ouverture fichier de configuration"<<endl;
     }
     string parcours_configfile;
-    string cmd = DataBase::instance().updater;   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+    string cmd = DataBase::instance().m_updater;   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
 
 
     getline(config, parcours_configfile);
@@ -91,26 +91,7 @@ void update() // MÉTHODE À RAPETISSIR !!
     getline(md5sum, md5Key);
 
 
-    /** Paramétrage de la base de données */ // DANS LE CONSTRUCTEUR ?
-
-    DataBase::instance().addDatabase("QSQLITE");
-
-    DataBase::instance().setHostName("localhost");
-    DataBase::instance().setUserName(QString(USER.c_str()));
-    DataBase::instance().setPassword("");
-    DataBase::instance().setDatabaseName( QString( (DataBase::instance().name).c_str() ) ); // SYNTAXE A ALLEGER !! (pas beau !)
-
-    cout << "La base s'appelle : " << DataBase::instance().name.c_str() << endl;
-
-
-    if( DataBase::instance().open() ) // PB : CONNEXION MARCHE PLUS ! => ERREUR DE PARENTHÈSE ? /// si la connexion est réussie
-    {
-        std::cout << "Vous êtes maintenant connecté à " << q2c(DataBase::instance().hostName()) << std::endl;
-    }
-    else
-    {
-        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(DataBase::instance().lastError().text()) << std::endl;
-    }
+    DataBase::instance().ouvrirDB(); /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
 
 
     while(filepath.size() != 0)
@@ -120,7 +101,7 @@ void update() // MÉTHODE À RAPETISSIR !!
         QFileInfo fichier(filepath.c_str());
 
 
-        requete.prepare("insert into " + QString(DataBase::instance().tableName.c_str()) + " values (?, ?, ?, ?)");
+        requete.prepare("insert into " + QString(DataBase::instance().m_tableName.c_str()) + " values (?, ?, ?, ?)");
         requete.addBindValue(QString(filepath.c_str()));
         requete.addBindValue(fichier.baseName());
         requete.addBindValue(fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss"));
@@ -144,7 +125,7 @@ void update() // MÉTHODE À RAPETISSIR !!
     system("rm pathnames.db 2> /dev/null"); // WARNING VALEUR DE RETOUR AUX DEUX APPELS
     system("rm md5.db 2> /dev/null");
 
-    DataBase::instance().close();
+    DataBase::instance().fermerDB();
 
 
 } // ferme automatiquement tous les flux
@@ -153,24 +134,10 @@ void update() // MÉTHODE À RAPETISSIR !!
 
 void lister()
 {
-    /** Paramétrage de la base de données */ // DANS LE CONSTRUCTEUR ?
-    DataBase::instance().addDatabase("QSQLITE");
-    DataBase::instance().setHostName("localhost");
-    DataBase::instance().setUserName(QString(USER.c_str()));
-    DataBase::instance().setPassword("");
-    DataBase::instance().setDatabaseName( QString( DataBase::instance().name.c_str() ) );
-
-    if( DataBase::instance().open() )
-    {
-        cout << "Vous êtes maintenant connecté à " << q2c(DataBase::instance().hostName()) << endl;
-    }
-    else
-    {
-        cout << "La connexion a échouée, désolé :(" << std::endl << q2c(DataBase::instance().lastError().text()) << endl;
-    }
+    DataBase::instance().ouvrirDB(); /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
 
     QSqlQuery query;
-    if(query.exec("SELECT filepath FROM " + QString(DataBase::instance().tableName.c_str())))
+    if(query.exec("SELECT filepath FROM " + QString(DataBase::instance().m_tableName.c_str())))
     {
         while(query.next())
         {
@@ -182,7 +149,7 @@ void lister()
         }
     }
 
-    DataBase::instance().close();
+    DataBase::instance().fermerDB();
 
 }
 
