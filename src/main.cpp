@@ -50,7 +50,7 @@ void update() // MÉTHODE À RAPETISSIR !!
         cerr<<"Erreur ouverture fichier de configuration"<<endl;
     }
     string parcours_configfile;
-    string cmd = DataBase::instance().m_updater;   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+    string cmd = DataBase::instance().updater();   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
 
 
     getline(config, parcours_configfile);
@@ -101,11 +101,12 @@ void update() // MÉTHODE À RAPETISSIR !!
         QFileInfo fichier(filepath.c_str());
 
 
-        requete.prepare("insert into " + QString(DataBase::instance().m_tableName.c_str()) + " values (?, ?, ?, ?)");
-        requete.addBindValue(QString(filepath.c_str()));
+        requete.prepare("insert into " + QString(DataBase::instance().tableName() ) + " values (?, ?, ?, ?)");
+
+        requete.addBindValue( QString( filepath.c_str() ) );
         requete.addBindValue(fichier.baseName());
         requete.addBindValue(fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss"));
-        requete.addBindValue(QString(md5Key.c_str()));
+        requete.addBindValue( QString( md5Key.c_str() ) );
 
         getline(pathnames, filepath);
         getline(md5sum, md5Key);
@@ -137,7 +138,7 @@ void lister()
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
 
     QSqlQuery query;
-    if(query.exec("SELECT filepath FROM " + QString(DataBase::instance().m_tableName.c_str())))
+    if(query.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
     {
         while(query.next())
         {
@@ -159,7 +160,6 @@ void lister()
 void menu()
 {
     char choix = 'm';
-
 
     while(choix!='q')
     {

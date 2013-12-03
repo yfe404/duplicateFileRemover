@@ -70,6 +70,26 @@ DataBase::DataBase()
 
 }
 
+/**
+  @brief accesseur du script de mise à jour
+
+  @return m_updater en const char*
+*/
+const char *DataBase::updater() const {
+    return m_updater.c_str();
+}
+
+
+/**
+  @brief accesseur du nom de la table
+
+  @return m_tableName en const char*
+*/
+const char *DataBase::tableName() const{
+    return m_tableName.c_str();
+}
+
+
 
 /**
   @brief ouverture de la base de données
@@ -100,6 +120,10 @@ DataBase::~DataBase()
 {
     delete father;
 }
+
+
+
+
 
 
 

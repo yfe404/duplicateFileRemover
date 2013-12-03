@@ -13,24 +13,24 @@ class DataBase
 {
 private:
     static std::string dataBaseCreator;
+    static std::string m_tableName;
+    static std::string m_name;
+    static std::string m_updater;
+
     QSqlDatabase* father; // passé en argument car, si on hérite, la connexion ne marche plus (A VOIR !)
 
 
     /**
       @brief Les constructeurs/opérateurs de copie.
-      Privés car on ne veut pas que ces fonctions puissent être appelées (afin de respecter le design pattern)
+      Privés (et non-implémentés pour certains) car on ne veut pas que ces fonctions puissent être appelées (afin de respecter le design pattern)
     */
     DataBase();
     DataBase (const DataBase&); /// Constructeur de copie (non-implémenté car singleton)
     void operator =(const DataBase&); /// Pour la meme raison que le constructeur de copie, l'opérateur de coppie ne sera pas implémenté
 
 public:
-    // ATTRIBUTS PUBLICS A MODIFIER (fait dans un premier temps dans un but de simplification)
-    static std::string m_tableName;
-    static std::string m_name;
-    static std::string m_updater;
-
-
+    const char* updater() const; /// getter du script de mise à jour (testé, OK)
+    const char* tableName() const; /// getter du nom de la table (testé, OK)
 
     /**
       @brief Récupère l'instance de la base de données existante
@@ -41,8 +41,8 @@ public:
         return instance;
     }
 
-    bool ouvrirDB();
-    void fermerDB();
+    bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
+    void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
 
     ~DataBase();
 };
