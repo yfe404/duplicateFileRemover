@@ -58,14 +58,7 @@ DataBase::DataBase()
     cout << "La base s'appelle : " << m_name << endl;
 
 
-    if( father->open() ) // PB : CONNEXION MARCHE PLUS ! => ERREUR DE PARENTHÈSE ? /// si la connexion est réussie
-    {
-        std::cout << "Vous êtes maintenant connecté à " << q2c(father->hostName()) << std::endl;
-    }
-    else
-    {
-        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(father->lastError().text()) << std::endl;
-    }
+
 
 
 }
@@ -94,11 +87,21 @@ const char *DataBase::tableName() const{
 /**
   @brief ouverture de la base de données
 
+  Ouvre la base de données et affiche un message en fonction du bon fonctionnement (ou non) de la méthode.
+
   @return true la base est ouverte
   @return false il y a eu un problème durant l'ouverture
 */
 bool DataBase::ouvrirDB(){
-    return father->open(); /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
+    if( father->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
+    {
+        std::cout << "Vous êtes maintenant connecté à " << q2c(father->hostName()) << std::endl;
+        return true;
+    }
+    else {
+        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(father->lastError().text()) << std::endl;
+        return false;
+    }
 }
 
 

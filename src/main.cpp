@@ -44,6 +44,7 @@ int main(int countArg, char **listArg)
 void update() // MÉTHODE À RAPETISSIR !!
 {
 
+    /* AVEC TOUS LES TESTS : EXCEPTIONS */
     ifstream config(CONFIGFILE);
     if(!config)
     {
@@ -135,7 +136,7 @@ void update() // MÉTHODE À RAPETISSIR !!
 
 void lister()
 {
-    DataBase::instance().ouvrirDB(); /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
+    DataBase::instance().ouvrirDB(); // VALRET A TESTER (exception ?) /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
 
     QSqlQuery query;
     if(query.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
