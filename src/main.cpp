@@ -31,11 +31,10 @@ void lister();
 
 int main(int countArg, char **listArg)
 {
-    QCoreApplication app(countArg, listArg);
 
     menu();
 
-    return app.exec();
+    return 0;
 }
 
 
@@ -177,7 +176,7 @@ void menu()
             afficherAide();
         break;
         case 'q' :
-            // quitte (COMMENT ? CAR APP.EXEC() A LA FIN DU MAIN !);
+            return;
         break;
         default:
             cout<<choix<<" : commande inconnue"<<endl;
