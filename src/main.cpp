@@ -105,7 +105,7 @@ void update() // MÉTHODE À RAPETISSIR !!
 
         requete.addBindValue( QString( filepath.c_str() ) );
         requete.addBindValue(fichier.baseName());
-        requete.addBindValue(fichier.lastModified().toString("dd MMMM yyyy hh-mm-ss"));
+        requete.addBindValue(fichier.lastModified().toTime_t());
         requete.addBindValue( QString( md5Key.c_str() ) );
 
         getline(pathnames, filepath);
