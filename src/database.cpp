@@ -16,8 +16,6 @@ using std::endl;
 using std::cerr;
 
 
-
-
 /** Définition des variables de classes */
 string DataBase::dataBaseCreator = "./create_database.sh "; /// pour les scripts, l'espace avant les " est volontaire car les scripts prendront des arguments
 string DataBase::m_updater = "./update.sh ";
@@ -119,10 +117,4 @@ DataBase::~DataBase()
 {
     delete father;
 }
-
-
-
-
-
-
 

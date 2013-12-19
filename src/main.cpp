@@ -27,6 +27,8 @@ void update();
 void afficherAide();
 void lister();
 
+const char* configurationUpdate();
+
 
 
 int main(int countArg, char **listArg)
@@ -40,43 +42,15 @@ int main(int countArg, char **listArg)
 
 
 
-void update() // MÉTHODE À RAPETISSIR !!; AVEC TOUS LES TESTS : EXCEPTIONS
+void update() // AVEC TOUS LES TESTS : EXCEPTIONS
 {
-
-    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */ // MÉTHODE  string configure();
-    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
-
-    if(!config)
-        cerr<<"Erreur ouverture fichier de configuration"<<endl;
-
-    string parcours_configfile;
-    string update = DataBase::instance().updater();   /// commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
-
-
-    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
-    if(parcours_configfile.size() == 0)
-    {
-        cerr<<"Fichier de configuration vide !"<<endl;
-    }
-
-
-    /** parcours du fichier de configuration pour connaître les autres dossiers à scanner */
-    while(parcours_configfile.size() != 0)
-    {
-        update += parcours_configfile + ' ';
-        getline(config, parcours_configfile);
-    }
-
-
     /**
     Appel du script update.sh pour les dossiers sélectionnés dans le fichier de configuration
-    Update
-*/
-    if(system(update.c_str())==-1)
+    */
+    if(system(configurationUpdate())==-1)
     {
         cerr<<"Erreur execution fichier : update.sh"<<endl;
     }
-
 
 
     /** Parcours des bases pathnames.db et md5.db */
@@ -94,8 +68,9 @@ void update() // MÉTHODE À RAPETISSIR !!; AVEC TOUS LES TESTS : EXCEPTIONS
     }
 
     string filepath;
-    string md5Key;
     getline(pathnames, filepath);
+
+    string md5Key;
     getline(md5sum, md5Key);
 
 
@@ -199,6 +174,32 @@ void menu()
 
 }
 
+const char* configurationUpdate(){
+    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */ // MÉTHODE  string configure();
+    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
+
+    if(!config)
+        cerr<<"Erreur ouverture fichier de configuration"<<endl;
+
+    string parcours_configfile;
+
+    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
+    if(parcours_configfile.size() == 0)
+    {
+        cerr<<"Fichier de configuration vide !"<<endl;
+    }
+
+    string update = DataBase::instance().updater();   /// commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+    /** parcours du fichier de configuration pour connaître les autres dossiers à scanner */
+    while(parcours_configfile.size() != 0)
+    {
+        update += parcours_configfile + ' ';
+        getline(config, parcours_configfile);
+    }
+
+    return update.c_str();
+}
+
 
 void afficherAide()
 {
@@ -208,10 +209,3 @@ void afficherAide()
     "   u   mettre à jour la base de données"<<endl<<
     "   q   quitter sans enrengistrer les changements"<<endl;
 }
-
-
-
-
-
-
-
