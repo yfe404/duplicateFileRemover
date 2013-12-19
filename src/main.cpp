@@ -1,16 +1,17 @@
+#include "database.h"
+
 #include <iostream>
 #include<fstream>
 
 #include <boost/filesystem.hpp>
 
-#include <QFileInfo>
-#include <QStringList>
-#include <QDateTime>
-#include <QCoreApplication>
+//#include <QFileInfo>
+//#include <QStringList>
+//#include <QDateTime>
+//#include <QCoreApplication>
+//#include <QSqlQuery>
 #include <QtSql>
-#include <QSqlQuery>
 
-#include "database.h"
 
 
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
@@ -34,7 +35,7 @@ void cleMd5(QString pathname);
 void addContentRecursively(path p, mode m);
 
 
-int main(int countArg, char **listArg)
+int main()
 {
 
     menu();
@@ -47,7 +48,7 @@ int main(int countArg, char **listArg)
 
 void update(){
 
-    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */ // MÉTHODE  string configure();
+    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */
     ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
 
     if(!config)
@@ -62,6 +63,7 @@ void update(){
     }
 
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
+
 
     /** Scan des dossiers sélectionnés */
     while(parcours_configfile.size() != 0)
@@ -110,8 +112,8 @@ void addContentRecursively(path p, mode m)
             }
 
             if (is_regular_file(*it)) /// Si c'est un fichier régulier
-                DataBase::instance().insertDB(*it); /// on ajoute ce fichier dans la base
-        }
+                DataBase::instance().addNewFile( *it ); /// on ajoute ce fichier dans la base
+       }
         catch (const filesystem_error& ex)
         {
             cerr << *it << " Permission Denied !\n";

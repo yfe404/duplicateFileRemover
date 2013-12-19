@@ -41,7 +41,7 @@ public:
         return instance;
     }
 
-    void insertDB(boost::filesystem::path& p); /// Insertion d'un fichier dans la base de données
+    void addNewFile(boost::filesystem::path p); /// Insertion d'un fichier dans la base de données
 
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)

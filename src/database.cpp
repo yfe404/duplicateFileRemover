@@ -70,9 +70,10 @@ const char *DataBase::tableName() const{
 
 /**
   @brief ajoute un fichier dans la base de données
+  Crée une requête insert into
 */
-void DataBase::insertDB(path &p){
-    ouvrirDB();
+void DataBase::addNewFile(path p){
+//    ouvrirDB();
 
     if (exists(p) && is_regular_file(p)) // A MODIF (un gros if c'est pas beau !)
     {
@@ -94,6 +95,8 @@ void DataBase::insertDB(path &p){
         if (!requete.exec())
             std::cerr << "Erreur ajout base de données" << std::endl;
     }
+
+//    fermerDB();
 }
 
 
