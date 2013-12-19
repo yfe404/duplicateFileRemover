@@ -40,40 +40,46 @@ int main(int countArg, char **listArg)
 
 
 
-void update() // MÉTHODE À RAPETISSIR !!
+void update() // MÉTHODE À RAPETISSIR !!; AVEC TOUS LES TESTS : EXCEPTIONS
 {
 
-    /* AVEC TOUS LES TESTS : EXCEPTIONS */
-    ifstream config(CONFIGFILE);
+    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */ // MÉTHODE  string configure();
+    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
+
     if(!config)
-    {
         cerr<<"Erreur ouverture fichier de configuration"<<endl;
-    }
+
     string parcours_configfile;
-    string cmd = DataBase::instance().updater();   // commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
+    string update = DataBase::instance().updater();   /// commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
 
 
-    getline(config, parcours_configfile);
+    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
     if(parcours_configfile.size() == 0)
     {
         cerr<<"Fichier de configuration vide !"<<endl;
     }
 
 
+    /** parcours du fichier de configuration pour connaître les autres dossiers à scanner */
     while(parcours_configfile.size() != 0)
     {
-        cmd += parcours_configfile + ' ';
+        update += parcours_configfile + ' ';
         getline(config, parcours_configfile);
     }
 
 
-    if(system(cmd.c_str())==-1)
+    /**
+    Appel du script update.sh pour les dossiers sélectionnés dans le fichier de configuration
+    Update
+*/
+    if(system(update.c_str())==-1)
     {
         cerr<<"Erreur execution fichier : update.sh"<<endl;
     }
 
-    string filepath;
-    string md5Key;
+
+
+    /** Parcours des bases pathnames.db et md5.db */
     ifstream pathnames("pathnames.db");
     if(!pathnames)
     {
@@ -87,6 +93,8 @@ void update() // MÉTHODE À RAPETISSIR !!
         cerr<<"Erreur ouverture fichier : md5.db"<<endl;
     }
 
+    string filepath;
+    string md5Key;
     getline(pathnames, filepath);
     getline(md5sum, md5Key);
 
@@ -94,7 +102,7 @@ void update() // MÉTHODE À RAPETISSIR !!
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
 
 
-    while(filepath.size() != 0)
+    while(filepath.size() != 0) // && md5key.size() != 0
     {
 // ici : méthode de DataBase => addFile(string filePath);
         QSqlQuery requete;
@@ -128,14 +136,20 @@ void update() // MÉTHODE À RAPETISSIR !!
 
     DataBase::instance().fermerDB();
 
-
-} // ferme automatiquement tous les flux
-
+} /// ferme automatiquement tous les flux
 
 
+
+/**
+  @brief liste les éléments de la base de données
+  utilise une requête select puis affiche les pathname de tous les fichiers
+*/
 void lister()
 {
-    DataBase::instance().ouvrirDB(); // VALRET A TESTER (exception ?) /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
+    if ( !DataBase::instance().ouvrirDB() )  { /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
+        cout << "Erreur ouverture de la base de données";
+        return;
+    }
 
     QSqlQuery query;
     if(query.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
@@ -143,10 +157,9 @@ void lister()
         while(query.next())
         {
             cout << "    Nouvelle entrée" << std::endl;
-            for(int x=0; x < query.record().count(); ++x)
-            {
-                cout << "        " << query.record().fieldName(x).toStdString() << " = " << query.value(x).toString().toStdString() << endl;
-            }
+            for(int x=0; x < query.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
+                cout << "        " << query.record().fieldName(x).toStdString() << " = " << query.value(x).toString().toStdString() << endl; /// affiche le pathname, et le numéro du champ sélectionné // 0?
+
         }
     }
 

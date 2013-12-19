@@ -18,11 +18,11 @@ void cleMd5(QString pathname);
 int main(int argc, char* argv[])
 {
 
-    path p (argv[1]);   // p reads clearer than argv[1] in the following code
+    path p (argv[1]);   /// p reads clearer than argv[1] in the following code
 
     try
     {
-        if (exists(p))    // does p actually exist?
+        if (exists(p))    /// does p actually exist?
             printContentRecursively(p, recursive);
 
         else
@@ -38,7 +38,9 @@ int main(int argc, char* argv[])
 }
 
 
-// displays name, path, and last modification date of the file given
+/**
+@brief displays name, path, and last modification date of the file given
+*/
 void stats(path p)
 {
     if (exists(p) && is_regular_file(p))
@@ -51,6 +53,10 @@ void stats(path p)
 }
 
 
+/**
+  @brief Calcul et affichage de la clé md5sum du fichier passé en paramètre
+  utilisation de QByteArray et QCryptographicHasg pour le calcul
+*/
 void cleMd5(QString pathname)
 {
     QFile fFichier(pathname);
@@ -60,6 +66,10 @@ void cleMd5(QString pathname)
     cout << QString(hashData.toHex()).toStdString();
 }
 
+
+/**
+  @brief Affiche un dossier et son contenu récursivement
+  */
 void printContentRecursively(path p, mode m)
 {
     directory_iterator end;
@@ -71,18 +81,15 @@ void printContentRecursively(path p, mode m)
        {
             if(m == recursive)
             {
-                if(is_directory(*it) && !is_symlink(*it))
+                if(is_directory(*it) && !is_symlink(*it)) /// Si c'est un dossier et non un lien symbolique
                 {
                     path dir(*it);
                     printContentRecursively(dir, recursive);
                 }
             }
 
-            if (is_regular_file(*it))
-            {
-                stats(*it);
-            }
-
+            if (is_regular_file(*it)) /// Si c'est un fichier régulier
+                stats(*it); /// on affiche ses informations.
        }
 
         catch(const filesystem_error& ex)

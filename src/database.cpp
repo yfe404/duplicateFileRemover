@@ -28,7 +28,7 @@ string DataBase::m_tableName = "files";
 
 /**
   @brief Constructeur de la classe Singleton DataBase
-  change les droits des scripts qui vont etre executes et cree la base de données
+  change les droits des scriptsqui vont etre executes et cree la base de données
   Grâce au pattern Singleton, il ne sera qu'une seule et unique fois (au premier appel d'une instance de DataBase)
   Ce pattern est utilisé car chaque utilisateur utilisant ce programme aura une seule et unique base de données contenant les informations sur ses fichiers
 */
@@ -56,12 +56,8 @@ DataBase::DataBase()
     father->setDatabaseName( QString( m_name.c_str() ) );
 
     cout << "La base s'appelle : " << m_name << endl;
-
-
-
-
-
 }
+
 
 /**
   @brief accesseur du script de mise à jour
