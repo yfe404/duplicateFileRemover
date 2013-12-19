@@ -1,18 +1,19 @@
 #include <iostream>
 #include<fstream>
 
+#include <boost/filesystem.hpp>
+
 #include <QFileInfo>
 #include <QStringList>
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QtSql>
+#include <QSqlQuery>
 
 #include "database.h"
 
-#define DB_SEP ':'  // A SUPPRIMER ? (comme on utilise sqlite3 désormais)      // séparateur dans le fichier qui servira de base de donnée en attendant sqlite
-#define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
 
-#define USER string(getenv("USER"))
+#define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
 
 //La macro-définition q2c est simplement faite pour faciliter la conversion de QString vers std::string
 #define q2c(string) string.toStdString()
@@ -20,15 +21,17 @@
 
 
 using namespace std;
+using namespace boost::filesystem;
 
+typedef enum {normal, recursive} mode;
 
+// PROTOTYPES ET CORPS DE MÉTHODES A BOUGER (dans une classe ?)
 void menu();
 void update();
 void afficherAide();
 void lister();
-
-const char* configurationUpdate();
-
+void cleMd5(QString pathname);
+void addContentRecursively(path p, mode m);
 
 
 int main(int countArg, char **listArg)
@@ -42,77 +45,96 @@ int main(int countArg, char **listArg)
 
 
 
-void update() // AVEC TOUS LES TESTS : EXCEPTIONS
-{
-    /**
-    Appel du script update.sh pour les dossiers sélectionnés dans le fichier de configuration
-    */
-    if(system(configurationUpdate())==-1)
+void update(){
+
+    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */ // MÉTHODE  string configure();
+    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
+
+    if(!config)
+        cerr<<"Erreur ouverture fichier de configuration"<<endl;
+
+    string parcours_configfile, filesToSee;
+
+    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
+    if(parcours_configfile.size() == 0)
     {
-        cerr<<"Erreur execution fichier : update.sh"<<endl;
+        cerr<<"Fichier de configuration vide !"<<endl;
     }
 
+    DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
 
-    /** Parcours des bases pathnames.db et md5.db */
-    ifstream pathnames("pathnames.db");
-    if(!pathnames)
+    /** Scan des dossiers sélectionnés */
+    while(parcours_configfile.size() != 0)
     {
-        cerr<<"Erreur ouverture fichier : pathnames.db"<<endl;
-    }
-
-
-    ifstream md5sum("md5.db");
-    if(!md5sum)
-    {
-        cerr<<"Erreur ouverture fichier : md5.db"<<endl;
-    }
-
-    string filepath;
-    getline(pathnames, filepath);
-
-    string md5Key;
-    getline(md5sum, md5Key);
-
-
-    DataBase::instance().ouvrirDB(); /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
-
-
-    while(filepath.size() != 0) // && md5key.size() != 0
-    {
-// ici : méthode de DataBase => addFile(string filePath);
-        QSqlQuery requete;
-        QFileInfo fichier(filepath.c_str());
-
-
-        requete.prepare("insert into " + QString(DataBase::instance().tableName() ) + " values (?, ?, ?, ?)");
-
-        requete.addBindValue( QString( filepath.c_str() ) );
-        requete.addBindValue(fichier.baseName());
-        requete.addBindValue(fichier.lastModified().toTime_t());
-        requete.addBindValue( QString( md5Key.c_str() ) );
-
-        getline(pathnames, filepath);
-        getline(md5sum, md5Key);
-
-        if (requete.exec())
+        path p(parcours_configfile);
+        try
         {
-            //std::cout << "Ça marche ! :)" << std::endl;
+            if (exists(p))    /// does p actually exist?
+                addContentRecursively(p, recursive);
+
+            else
+              cout << p << " does not exist\n";
         }
-        else
+        catch(const filesystem_error& ex)
         {
-            std::cerr << "Erreur ajout base de données" << std::endl;
+            cerr << p << " Permission Denied !\n";
         }
 
 
+        getline(config, parcours_configfile); /// continue le parcours du fichier
     }
-
-    system("rm pathnames.db 2> /dev/null"); // WARNING VALEUR DE RETOUR AUX DEUX APPELS
-    system("rm md5.db 2> /dev/null");
 
     DataBase::instance().fermerDB();
-
 } /// ferme automatiquement tous les flux
 
+
+/**
+  @brief Affiche un dossier et son contenu récursivement
+  */
+void addContentRecursively(path p, mode m)
+{
+    directory_iterator end;
+    directory_iterator it(p);
+
+    while(it != end)
+    {
+       try
+       {
+            if(m == recursive)
+            {
+                if(is_directory(*it) && !is_symlink(*it)) /// Si c'est un dossier et non un lien symbolique
+                {
+                    path dir(*it);
+                    addContentRecursively(dir, recursive);
+                }
+            }
+
+            if (is_regular_file(*it)) /// Si c'est un fichier régulier
+                DataBase::instance().insertDB(*it); /// on ajoute ce fichier dans la base
+        }
+        catch (const filesystem_error& ex)
+        {
+            cerr << *it << " Permission Denied !\n";
+        }
+
+        ++it;
+    }
+}
+
+
+
+/**
+  @brief Calcul et affichage de la clé md5sum du fichier passé en paramètre
+  utilisation de QByteArray et QCryptographicHasg pour le calcul
+*/
+void cleMd5(QString pathname)
+{
+    QFile fFichier(pathname);
+    fFichier.open(QIODevice::ReadOnly);
+    QByteArray contenuFichier = fFichier.readAll();
+    QByteArray hashData = QCryptographicHash::hash(contenuFichier,QCryptographicHash::Md5);
+    cout << QString(hashData.toHex()).toStdString();
+}
 
 
 /**
@@ -174,32 +196,6 @@ void menu()
 
 }
 
-const char* configurationUpdate(){
-    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */ // MÉTHODE  string configure();
-    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
-
-    if(!config)
-        cerr<<"Erreur ouverture fichier de configuration"<<endl;
-
-    string parcours_configfile;
-
-    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
-    if(parcours_configfile.size() == 0)
-    {
-        cerr<<"Fichier de configuration vide !"<<endl;
-    }
-
-    string update = DataBase::instance().updater();   /// commande qui sera lancée pour appeler le script avec le nom des dossiers à parcourir
-    /** parcours du fichier de configuration pour connaître les autres dossiers à scanner */
-    while(parcours_configfile.size() != 0)
-    {
-        update += parcours_configfile + ' ';
-        getline(config, parcours_configfile);
-    }
-
-    return update.c_str();
-}
-
 
 void afficherAide()
 {
@@ -209,3 +205,5 @@ void afficherAide()
     "   u   mettre à jour la base de données"<<endl<<
     "   q   quitter sans enrengistrer les changements"<<endl;
 }
+
+

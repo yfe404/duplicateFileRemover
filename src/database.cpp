@@ -1,8 +1,11 @@
 #include <string>
 #include <iostream>
 
+#include <boost/filesystem.hpp>
+
 #include <QSqlDatabase>
 #include <QtSql>
+#include <QtGlobal>
 
 #include "database.h"
 
@@ -10,15 +13,13 @@
 #define q2c(string) string.toStdString()
 
 
-using std::string;
-using std::cout;
-using std::endl;
-using std::cerr;
+using namespace std;
+using namespace boost::filesystem;
+
 
 
 /** Définition des variables de classes */
 string DataBase::dataBaseCreator = "./create_database.sh "; /// pour les scripts, l'espace avant les " est volontaire car les scripts prendront des arguments
-string DataBase::m_updater = "./update.sh ";
 string DataBase::m_name = (string(getenv("USER")) + ".db");
 string DataBase::m_tableName = "files";
 
@@ -35,7 +36,7 @@ DataBase::DataBase()
     father = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
 
     /** Changement des droits sur les scripts afin que l'on puisse les exécuter */
-    string cmd1 = string("chmod +x ") + dataBaseCreator + m_updater;
+    string cmd1 = string("chmod +x ") + dataBaseCreator;
     cout<< cmd1 <<endl;
     system(cmd1.c_str()); // CODERET À TESTER
 
@@ -58,22 +59,41 @@ DataBase::DataBase()
 
 
 /**
-  @brief accesseur du script de mise à jour
-
-  @return m_updater en const char*
-*/
-const char *DataBase::updater() const {
-    return m_updater.c_str();
-}
-
-
-/**
   @brief accesseur du nom de la table
 
   @return m_tableName en const char*
 */
 const char *DataBase::tableName() const{
     return m_tableName.c_str();
+}
+
+
+/**
+  @brief ajoute un fichier dans la base de données
+*/
+void DataBase::insertDB(path &p){
+    ouvrirDB();
+
+    if (exists(p) && is_regular_file(p)) // A MODIF (un gros if c'est pas beau !)
+    {
+
+        // ici : méthode de DataBase => addFile(string filePath);
+        QSqlQuery requete;
+
+        requete.prepare("insert into " + QString(tableName()) + " values (?, ?, ?, ?)");
+
+        requete.addBindValue( p.c_str() ); /// ajout du pathname
+        requete.addBindValue( p.filename().c_str()); /// ajout du filename
+
+        requete.addBindValue( quint64(last_write_time(p))  ); /// date de dernière modification
+
+        requete.addBindValue(file_size(p)); /// taille
+        //        requete.addBindValue( QString( md5Key.c_str() ) ); /// clé md5
+
+
+        if (!requete.exec())
+            std::cerr << "Erreur ajout base de données" << std::endl;
+    }
 }
 
 

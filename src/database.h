@@ -2,6 +2,7 @@
 #define DATABASE_H
 
 #include <string>
+#include <boost/filesystem.hpp>
 
 /**
  @class DataBase
@@ -9,13 +10,13 @@
 */
 
 class QSqlDatabase;
+
 class DataBase
 {
 private:
     static std::string dataBaseCreator;
     static std::string m_tableName;
     static std::string m_name;
-    static std::string m_updater;
 
     QSqlDatabase* father; // passé en argument car, si on hérite, la connexion ne marche plus (A VOIR !)
 
@@ -29,7 +30,6 @@ private:
     void operator =(const DataBase&); /// Pour la meme raison que le constructeur de copie, l'opérateur de coppie ne sera pas implémenté
 
 public:
-    const char* updater() const; /// getter du script de mise à jour (testé, OK)
     const char* tableName() const; /// getter du nom de la table (testé, OK)
 
     /**
@@ -40,6 +40,8 @@ public:
         static DataBase instance;
         return instance;
     }
+
+    void insertDB(boost::filesystem::path& p); /// Insertion d'un fichier dans la base de données
 
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
