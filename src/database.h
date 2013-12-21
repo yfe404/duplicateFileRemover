@@ -3,6 +3,8 @@
 
 #include <string>
 #include <boost/filesystem.hpp>
+#include <QSqlDatabase>
+#include <QtSql>
 
 /**
  @class DataBase
@@ -40,8 +42,6 @@ public:
         static DataBase instance;
         return instance;
     }
-
-    void addNewFile(boost::filesystem::path p); /// Insertion d'un fichier dans la base de données
 
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)

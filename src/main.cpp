@@ -2,16 +2,13 @@
 
 #include <iostream>
 #include<fstream>
-
 #include <boost/filesystem.hpp>
-
-//#include <QFileInfo>
-//#include <QStringList>
-//#include <QDateTime>
-//#include <QCoreApplication>
-//#include <QSqlQuery>
 #include <QtSql>
 
+#include "path.h"
+#include "vmd5.h"
+#include "vdisplayer.h"
+#include "vadddatabase.h"
 
 
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
@@ -31,12 +28,12 @@ void menu();
 void update();
 void afficherAide();
 void lister();
-void cleMd5(QString pathname);
-void addContentRecursively(path p, mode m);
+void addContentRecursively(Path p, mode m);
 
 
 int main()
 {
+    DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
 
     menu();
 
@@ -54,7 +51,7 @@ void update(){
     if(!config)
         cerr<<"Erreur ouverture fichier de configuration"<<endl;
 
-    string parcours_configfile, filesToSee;
+    string parcours_configfile;
 
     getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
     if(parcours_configfile.size() == 0)
@@ -62,13 +59,11 @@ void update(){
         cerr<<"Fichier de configuration vide !"<<endl;
     }
 
-    DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
-
 
     /** Scan des dossiers sélectionnés */
     while(parcours_configfile.size() != 0)
     {
-        path p(parcours_configfile);
+        Path p(parcours_configfile);
         try
         {
             if (exists(p))    /// does p actually exist?
@@ -86,15 +81,15 @@ void update(){
         getline(config, parcours_configfile); /// continue le parcours du fichier
     }
 
-    DataBase::instance().fermerDB();
 } /// ferme automatiquement tous les flux
 
 
 /**
   @brief Affiche un dossier et son contenu récursivement
   */
-void addContentRecursively(path p, mode m)
+void addContentRecursively(Path p, mode m)
 {
+    VAddDatabase * v = new VAddDatabase();              /// Crée un visiteur du type "Ajoueur à la BDD
     directory_iterator end;
     directory_iterator it(p);
 
@@ -106,13 +101,13 @@ void addContentRecursively(path p, mode m)
             {
                 if(is_directory(*it) && !is_symlink(*it)) /// Si c'est un dossier et non un lien symbolique
                 {
-                    path dir(*it);
+                    Path dir(*it);
                     addContentRecursively(dir, recursive);
                 }
             }
 
-            if (is_regular_file(*it)) /// Si c'est un fichier régulier
-                DataBase::instance().addNewFile( *it ); /// on ajoute ce fichier dans la base
+            if (is_regular_file(*it) && file_size(*it) > 0) /// Si c'est un fichier régulier
+                Path(*it).Accept(v);                    /// Accepte un visiteur pour se faire ajouter à la base de données
        }
         catch (const filesystem_error& ex)
         {
@@ -125,18 +120,6 @@ void addContentRecursively(path p, mode m)
 
 
 
-/**
-  @brief Calcul et affichage de la clé md5sum du fichier passé en paramètre
-  utilisation de QByteArray et QCryptographicHasg pour le calcul
-*/
-void cleMd5(QString pathname)
-{
-    QFile fFichier(pathname);
-    fFichier.open(QIODevice::ReadOnly);
-    QByteArray contenuFichier = fFichier.readAll();
-    QByteArray hashData = QCryptographicHash::hash(contenuFichier,QCryptographicHash::Md5);
-    cout << QString(hashData.toHex()).toStdString();
-}
 
 
 /**
@@ -145,25 +128,19 @@ void cleMd5(QString pathname)
 */
 void lister()
 {
-    if ( !DataBase::instance().ouvrirDB() )  { /// On ouvre la base de données pour pouvoir ensuite faire des requêtes dessus
-        cout << "Erreur ouverture de la base de données";
-        return;
-    }
+    VDisplayer * v = new VDisplayer();          /// Crée un visiteur de type "Afficheur"
 
     QSqlQuery query;
     if(query.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
     {
         while(query.next())
         {
-            cout << "    Nouvelle entrée" << std::endl;
+
             for(int x=0; x < query.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
-                cout << "        " << query.record().fieldName(x).toStdString() << " = " << query.value(x).toString().toStdString() << endl; /// affiche le pathname, et le numéro du champ sélectionné // 0?
+                Path(query.value(x).toString().toStdString()).Accept(v);    /// Accepte le visiteur pour se faire afficher
 
         }
     }
-
-    DataBase::instance().fermerDB();
-
 }
 
 
@@ -180,22 +157,21 @@ void menu()
         switch(choix)
         {
         case 'l' :
-            lister();
+            lister();       /// Liste les fichiers présents dans la BDD
         break;
         case 'u' :
-            update();
+            update();       /// Met à jour la liste des fichiers de la BDD
         case 'm' :
-            afficherAide();
+            afficherAide(); /// Affiche ce menu
         break;
         case 'q' :
-            return;
+            return;         /// Quitte le programme
         break;
         default:
-            cout<<choix<<" : commande inconnue"<<endl;
+            cout<<choix<<" : commande inconnue"<<endl;  /// Par défaut affiche commande inconnue
 
         }
     }
-
 }
 
 

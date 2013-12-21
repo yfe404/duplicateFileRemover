@@ -2,9 +2,6 @@
 #include <iostream>
 
 #include <boost/filesystem.hpp>
-
-#include <QSqlDatabase>
-#include <QtSql>
 #include <QtGlobal>
 
 #include "database.h"
@@ -37,12 +34,12 @@ DataBase::DataBase()
 
     /** Changement des droits sur les scripts afin que l'on puisse les exécuter */
     string cmd1 = string("chmod +x ") + dataBaseCreator;
-    cout<< cmd1 <<endl;
+    //cout<< cmd1 <<endl;
     system(cmd1.c_str()); // CODERET À TESTER
 
     /** Appel du script pour créer la base de données sqlite */
     string cmd2 = dataBaseCreator + m_name + ' ' + m_tableName + string(" 2> /dev/null");
-    cout<<cmd2<<endl;
+    //cout<<cmd2<<endl;
     if(system(cmd2.c_str()) == -1)
     {
         cerr<<"Can't create database !"<<endl;
@@ -54,7 +51,7 @@ DataBase::DataBase()
     father->setPassword("");
     father->setDatabaseName( QString( m_name.c_str() ) );
 
-    cout << "La base s'appelle : " << m_name << endl;
+    //cout << "La base s'appelle : " << m_name << endl;
 }
 
 
@@ -72,32 +69,8 @@ const char *DataBase::tableName() const{
   @brief ajoute un fichier dans la base de données
   Crée une requête insert into
 */
-void DataBase::addNewFile(path p){
-//    ouvrirDB();
-
-    if (exists(p) && is_regular_file(p)) // A MODIF (un gros if c'est pas beau !)
-    {
-
-        // ici : méthode de DataBase => addFile(string filePath);
-        QSqlQuery requete;
-
-        requete.prepare("insert into " + QString(tableName()) + " values (?, ?, ?, ?)");
-
-        requete.addBindValue( p.c_str() ); /// ajout du pathname
-        requete.addBindValue( p.filename().c_str()); /// ajout du filename
-
-        requete.addBindValue( quint64(last_write_time(p))  ); /// date de dernière modification
-
-        requete.addBindValue(file_size(p)); /// taille
-        //        requete.addBindValue( QString( md5Key.c_str() ) ); /// clé md5
 
 
-        if (!requete.exec())
-            std::cerr << "Erreur ajout base de données" << std::endl;
-    }
-
-//    fermerDB();
-}
 
 
 
@@ -112,7 +85,7 @@ void DataBase::addNewFile(path p){
 bool DataBase::ouvrirDB(){
     if( father->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
     {
-        std::cout << "Vous êtes maintenant connecté à " << q2c(father->hostName()) << std::endl;
+        //std::cout << "Vous êtes maintenant connecté à " << q2c(father->hostName()) << std::endl;
         return true;
     }
     else {
