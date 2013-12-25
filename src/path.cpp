@@ -14,8 +14,9 @@ void Path::Accept(Visitor* v){
 /**
   @brief vérifie si un fichier donné est caché ou non
 
-  @idea : convertir en qfileinfo (si fonction présente)
-  -vérifier si le premier caractère du fichier est un '.' (problème de portabilité ! => ce format que sous linux ! Comment faire pour windows ?)
+  vérifier si le premier caractère du fichier est un '.'
+   (problème de portabilité ! => ce format que sous linux ! Comment faire pour windows ?)
+  Idées : convertir en qfileinfo (si méthode plus portable)
 */
 bool Path::isHidden(path p) const{
     std::string fileName = (p.filename()).string();

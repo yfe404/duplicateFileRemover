@@ -1,15 +1,13 @@
 #include "database.h"
-
-#include <iostream>
-#include<fstream>
-#include <boost/filesystem.hpp>
-#include <QtSql>
-
 #include "path.h"
 #include "vmd5.h"
 #include "vdisplayer.h"
 #include "vadddatabase.h"
 
+#include <iostream>
+#include<fstream>
+#include <boost/filesystem.hpp>
+#include <QtSql>
 
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
 
@@ -133,14 +131,16 @@ void addContentRecursively(Path &p, mode m)
 */
 void lister()
 {
-    VDisplayer *afficheur = new VDisplayer();          /// Crée un visiteur de type "Afficheur"
+    VDisplayer *afficheur = new VDisplayer();
 
     QSqlQuery selectQuery;
 
-    if( selectQuery.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
-        while(selectQuery.next())
+    if( selectQuery.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) ) {
+        while(selectQuery.next()) { /// tant qu'il y a encore des résultats à la requête...
             for(int x=0; x < selectQuery.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
                 Path(selectQuery.value(x).toString().toStdString()).Accept(afficheur);    /// Accepte le visiteur pour se faire afficher
+        }
+    }
 
     delete afficheur; /// une fois utilisée, on supprime le visiteur
 }
