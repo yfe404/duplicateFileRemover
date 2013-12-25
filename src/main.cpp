@@ -28,7 +28,7 @@ void menu();
 void update();
 void afficherAide();
 void lister();
-void addContentRecursively(Path p, mode m);
+void addContentRecursively(Path &p, mode m);
 
 
 int main()
@@ -70,7 +70,7 @@ void update(){
                 addContentRecursively(p, recursive);
 
             else
-              cout << p << " does not exist\n";
+                cout << p << " does not exist\n";
         }
         catch(const filesystem_error& ex)
         {
@@ -85,36 +85,41 @@ void update(){
 
 
 /**
-  @brief Affiche un dossier et son contenu récursivement
-  */
-void addContentRecursively(Path p, mode m)
-{
-    VAddDatabase * v = new VAddDatabase();              /// Crée un visiteur du type "Ajoueur à la BDD
-    directory_iterator end;
-    directory_iterator it(p);
+  @brief ajoute récursivement un dossier et son contenu à notre base de données
 
-    while(it != end)
+  @param p le fichier courant
+  @param m le mode choisit pour le scan, peut être récursif ou normal (on ne parcoure pas les dossiers)
+*/
+void addContentRecursively(Path &p, mode m)
+{
+    VAddDatabase addDB;   // new enlevé pour risques de fuites de mémoire           /// Crée un visiteur du type "Ajoueur à la BDD
+    directory_iterator end;
+    directory_iterator file(p);
+
+    while(file != end)
     {
        try
        {
+            if (p.isHidden(*file)) // utilisation test de la fonction isHidden()
+                cout << "Le fichier " << *file << " est caché !" << endl;
             if(m == recursive)
             {
-                if(is_directory(*it) && !is_symlink(*it)) /// Si c'est un dossier et non un lien symbolique
+                if(is_directory(*file) && !is_symlink(*file)) /// Si c'est un dossier et non un lien symbolique
                 {
-                    Path dir(*it);
+                    Path dir(*file);
                     addContentRecursively(dir, recursive);
                 }
             }
 
-            if (is_regular_file(*it) && file_size(*it) > 0) /// Si c'est un fichier régulier
-                Path(*it).Accept(v);                    /// Accepte un visiteur pour se faire ajouter à la base de données
+            if (is_regular_file(*file) && file_size(*file) > 0) /// Si c'est un fichier régulier
+                Path(*file).Accept(&addDB);                    /// Accepte un visiteur pour se faire ajouter à la base de données
        }
         catch (const filesystem_error& ex)
         {
-            cerr << *it << " Permission Denied !\n";
+            cerr << *file << " Permission Denied !\n";
         }
 
-        ++it;
+        ++file;
     }
 }
 
@@ -128,19 +133,16 @@ void addContentRecursively(Path p, mode m)
 */
 void lister()
 {
-    VDisplayer * v = new VDisplayer();          /// Crée un visiteur de type "Afficheur"
+    VDisplayer *afficheur = new VDisplayer();          /// Crée un visiteur de type "Afficheur"
 
-    QSqlQuery query;
-    if(query.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
-    {
-        while(query.next())
-        {
+    QSqlQuery selectQuery;
 
-            for(int x=0; x < query.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
-                Path(query.value(x).toString().toStdString()).Accept(v);    /// Accepte le visiteur pour se faire afficher
+    if( selectQuery.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) )
+        while(selectQuery.next())
+            for(int x=0; x < selectQuery.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
+                Path(selectQuery.value(x).toString().toStdString()).Accept(afficheur);    /// Accepte le visiteur pour se faire afficher
 
-        }
-    }
+    delete afficheur; /// une fois utilisée, on supprime le visiteur
 }
 
 
@@ -177,11 +179,9 @@ void menu()
 
 void afficherAide()
 {
-    cout<<"Commande d'action"<<endl<<
+    cout<< endl <<"Commande d'action"<<endl<<
     "   l   lister les fichiers (sera remplacé par doublons) du dossier passé en paramètre"<<endl<<
     "   m   afficher ce menu"<<endl<<
     "   u   mettre à jour la base de données"<<endl<<
     "   q   quitter sans enrengistrer les changements"<<endl;
 }
-
-

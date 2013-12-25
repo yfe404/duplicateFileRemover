@@ -7,7 +7,7 @@ class Visitor
 {
 public:
     Visitor(){}
-    virtual void visit(Path* p) = 0;
+    virtual void visit(Path *) = 0;
 };
 
 #endif // VISITOR_H

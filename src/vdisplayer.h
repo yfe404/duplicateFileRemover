@@ -12,7 +12,7 @@ class VDisplayer : public Visitor
 {
 public:
     VDisplayer();
-    void visit(Path *p);
+    void visit(Path *);
 };
 
 #endif // VDISPLAYER_H

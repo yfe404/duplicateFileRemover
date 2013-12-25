@@ -1,16 +1,18 @@
 #include "vdisplayer.h"
 #include "path.h"
+
 #include <iostream>
 
 VDisplayer::VDisplayer()
 {
 }
 
-void VDisplayer::visit(Path *p)
+void VDisplayer::visit(Path *file)
 {
-    if (exists(*p) && is_regular_file(*p))
-    {
-        std::cout << last_write_time(*p) << " : " << file_size(*p) << " : "<< p->filename() << " : "<< *p << '\n';
-        std::cout << "\n";
-    }
+    if (!file->isExistingRegular()) /// si c'est un fichier régulier et qu'il existe...
+        return;
+
+    std::cout << last_write_time(*file) << " : " << file_size(*file) << " : "<< file->filename() << " : "<< *file << '\n';
+    std::cout << "\n";
+
 }

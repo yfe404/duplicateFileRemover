@@ -2,9 +2,9 @@
 #define PATH_H
 
 #include <boost/filesystem.hpp>
-#include <visitor.h>
+class Visitor;
 
-
+// HERITAGE À MODIFIER !! (destructeur de path non-virtuel)
 class Path : public boost::filesystem::path
 {
 public:
@@ -12,7 +12,12 @@ public:
     Path(const std::string& v) : path(v) {}
     Path(const char* p):path(p){}
     Path(const path& p):path(p){}
-    void Accept(Visitor* v) { v->visit(this); }
+
+    void Accept(Visitor* v);
+
+    bool isHidden(path p) const;
+
+    bool isExistingRegular() const;
 };
 
 #endif // PATH_H

@@ -7,7 +7,7 @@ class VAddDatabase : public Visitor
 {
 public:
     VAddDatabase();
-    void visit(Path *p);
+    void visit(Path *file);
 };
 
 #endif // VADDDATABASE_H

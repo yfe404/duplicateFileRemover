@@ -13,7 +13,8 @@ SOURCES += main.cpp \
     database.cpp \
     vdisplayer.cpp \
     vmd5.cpp \
-    vadddatabase.cpp
+    vadddatabase.cpp \
+    path.cpp
 
 HEADERS += \
     database.h \
@@ -23,7 +24,11 @@ HEADERS += \
     vmd5.h \
     vadddatabase.h
 
- INCLUDEPATH+=/usr/local/boost_1_55_0
- LIBS+=-L/usr/local/boost_1_55_0/stage/lib -lboost_system -lboost_filesystem
+# INCLUDEPATH+=/usr/local/boost_1_55_0
+# LIBS+=-L/usr/local/boost_1_55_0/stage/lib -lboost_system -lboost_filesystem
 
-# INCLUDEPATH+=/home/kramel/boostInstall/boost_1_55_0
+# Aymeric
+INCLUDEPATH+=/usr/local/boost_1_55_0
+INCLUDEPATH+=/usr/local/include/boost
+INCLUDEPATH+=/usr/local/boost_1_55_0/boost
+LIBS+=-L/usr/local/boost_1_55_0/stage/lib -lboost_system -lboost_filesystem

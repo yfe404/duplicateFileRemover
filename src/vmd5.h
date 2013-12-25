@@ -12,7 +12,7 @@ class VMd5 : public Visitor
 {
 public:
     VMd5();
-    void visit(Path *p);
+    void visit(Path *);
 };
 
 #endif // VMD5_H
