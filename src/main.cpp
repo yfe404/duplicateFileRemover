@@ -98,20 +98,20 @@ void addContentRecursively(Path &p, mode m)
     {
        try
        {
-            if (p.isHidden(*file)) // utilisation test de la fonction isHidden()
-                cout << "Le fichier " << *file << " est caché !" << endl;
             if(m == recursive)
             {
-                if(is_directory(*file) && !is_symlink(*file)) /// Si c'est un dossier et non un lien symbolique
+                if(is_directory(*file) && !is_symlink(*file) && !p.isHidden(*file) && !p.isForbidden(*file)) /// Si c'est un dossier, non un lien symbolique, qu'il n'est ni caché, ni interdit..
                 {
                     Path dir(*file);
-                    addContentRecursively(dir, recursive);
+                    addContentRecursively(dir, recursive); /// on relance la fonction récursivement
                 }
             }
 
-            if (is_regular_file(*file) && file_size(*file) > 0) /// Si c'est un fichier régulier
-                Path(*file).Accept(&addDB);                    /// Accepte un visiteur pour se faire ajouter à la base de données
-       }
+            if (is_regular_file(*file) && file_size(*file) > 0 && !p.isHidden(*file)) { /// Si c'est un fichier régulier, de taille supérieure à 0 et qui n'est pas caché...
+                Path(*file).Accept(&addDB); /// Accepte un visiteur pour se faire ajouter à la base de données
+                cout << *file << " ajouté " << endl;
+            }
+        }
         catch (const filesystem_error& ex)
         {
             cerr << *file << " Permission Denied !\n";
@@ -135,7 +135,7 @@ void lister()
 
     QSqlQuery selectQuery;
 
-    if( selectQuery.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName() ) ) ) {
+    if( selectQuery.exec("SELECT filepath FROM " + QString( DataBase::instance().tableName()) ) ) {
         while(selectQuery.next()) { /// tant qu'il y a encore des résultats à la requête...
             for(int x=0; x < selectQuery.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
                 Path(selectQuery.value(x).toString().toStdString()).Accept(afficheur);    /// Accepte le visiteur pour se faire afficher

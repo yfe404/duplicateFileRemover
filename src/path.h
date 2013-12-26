@@ -16,7 +16,7 @@ public:
     void Accept(Visitor* v);
 
     bool isHidden(path p) const;
-
+    bool isForbidden(path p) const; /// vérifie si un fichier donnné fait partie de la blacklist
     bool isExistingRegular() const;
 };
 
