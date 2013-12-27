@@ -8,7 +8,7 @@
 
 /**
  @class DataBase
- @brief classe singleton, basée sur QSqlDatabase, nous permettant de manipuler la base de données sqlite3
+ @brief classe singleton, héritant de QSqlDatabase, nous permettant de manipuler la base de données sqlite3
 */
 
 class QSqlDatabase;
@@ -38,7 +38,7 @@ public:
       @brief Récupère l'instance de la base de données existante
       Au premier appel, crée la base en appelant le constructeur
     */
-    static DataBase& instance(){ // ok
+    static DataBase& instance(){
         static DataBase instance;
         return instance;
     }
