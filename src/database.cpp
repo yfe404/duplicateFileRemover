@@ -1,25 +1,19 @@
 #include <string>
 #include <iostream>
+#include<fstream>
 
-#include <boost/filesystem.hpp>
 #include <QtGlobal>
 
 #include "database.h"
+#include "extended_filesystem.h"
 
-
-#define q2c(string) string.toStdString()
-
+#define TFILES string("TFILES")
+#define DATABASE_NAME string(string(getenv("USER")) + string(".db"))
+#define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
+#define CREATE_FILE_DB string("echo -e \"create table " + TFILES  + " (filepath varchar(255) primary key, filename varchar(255), lastmodified varchar(255), size integer, md5sum varchar(255));\n\" | /usr/bin/sqlite3" +" " + DATABASE_NAME)
 
 using namespace std;
 using namespace boost::filesystem;
-
-
-
-/** Définition des variables de classes */
-string DataBase::dataBaseCreator = "./create_database.sh "; /// pour les scripts, l'espace avant les " est volontaire car les scripts prendront des arguments
-string DataBase::m_name = (string(getenv("USER")) + ".db");
-string DataBase::m_tableName = "files";
-
 
 
 /**
@@ -32,15 +26,10 @@ DataBase::DataBase()
 {
     father = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
 
-    /** Changement des droits sur les scripts afin que l'on puisse les exécuter */
-    string cmd1 = string("chmod +x ") + dataBaseCreator;
-    //cout<< cmd1 <<endl;
-    system(cmd1.c_str()); // CODERET À TESTER
 
     /** Appel du script pour créer la base de données sqlite */
-    string cmd2 = dataBaseCreator + m_name + ' ' + m_tableName + string(" 2> /dev/null");
-    //cout<<cmd2<<endl;
-    if(system(cmd2.c_str()) == -1)
+
+    if(system(CREATE_FILE_DB.c_str()) == -1)
     {
         cerr<<"Can't create database !"<<endl;
     }
@@ -49,27 +38,10 @@ DataBase::DataBase()
     father->setHostName("localhost");
     father->setUserName( QString( getenv("USER")) );
     father->setPassword("");
-    father->setDatabaseName( QString( m_name.c_str() ) );
+    father->setDatabaseName( QString(DATABASE_NAME.c_str()) );
 
     //cout << "La base s'appelle : " << m_name << endl;
 }
-
-
-/**
-  @brief accesseur du nom de la table
-
-  @return m_tableName en const char*
-*/
-const char *DataBase::tableName() const{
-    return m_tableName.c_str();
-}
-
-
-/**
-  @brief ajoute un fichier dans la base de données
-  Crée une requête insert into
-*/
-
 
 
 
@@ -89,7 +61,7 @@ bool DataBase::ouvrirDB(){
         return true;
     }
     else {
-        std::cout << "La connexion a échouée, désolé :(" << std::endl << q2c(father->lastError().text()) << std::endl;
+        std::cout << "La connexion a échouée, désolé :(" << std::endl << father->lastError().text().toStdString() << std::endl;
         return false;
     }
 }
@@ -113,4 +85,286 @@ DataBase::~DataBase()
 {
     delete father;
 }
+
+bool DataBase::commit()
+{
+    return father->commit();
+}
+
+bool DataBase::rollback()
+{
+    return father->rollback();
+}
+
+bool DataBase::transaction()
+{
+    return father->transaction();
+}
+
+
+
+/**
+  @brief Met à jour la base de données des fichiers.
+*/
+void DataBase::update(){
+
+    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */
+    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
+
+    if(!config)
+    {
+        cerr<<"Erreur ouverture fichier de configuration"<<endl;
+    }
+
+    string parcours_configfile;
+
+    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
+    if(parcours_configfile.size() == 0)
+    {
+        cerr<<"Fichier de configuration vide !"<<endl;
+    }
+
+    list<boost::filesystem::path*> *liste = new list<boost::filesystem::path*> ;
+
+    /** Scan des dossiers sélectionnés */
+    while(parcours_configfile.size() != 0)
+    {
+
+        boost::filesystem::path rep(parcours_configfile);
+        try
+        {
+            if (exists(rep))    /// Si le chemin existe
+            {
+               addContentRecursively(rep, liste, recursive); /// ajout des fichiers de manière récursive ou pas à la liste
+            }
+
+            else
+              cout << rep << " does not exist\n";
+        }
+        catch(const filesystem_error& ex)
+        {
+            cerr << rep << " Permission Denied !\n";
+        }
+
+
+        getline(config, parcours_configfile); /// continue le parcours du fichier
+
+
+    }
+    DataBase::instance().transaction();       /// Début de transaction
+
+    QSqlQuery requete;
+
+    /// Insert ou met à jour dans la base si la clé existe déjà
+    requete.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?)");
+
+    for(list<boost::filesystem::path*>::iterator it = liste->begin(); it != liste->end(); ++it)
+    {
+            requete.addBindValue( (*it)->c_str() ); /// ajout du pathname
+            requete.addBindValue((*it)->filename().c_str()); /// ajout du filename
+            requete.addBindValue( quint64(last_write_time(*(*it)))  ); /// date de dernière modification
+            requete.addBindValue(quint64(file_size(*(*it)))); /// taille
+            requete.addBindValue("");                   /// Vide pour le moment
+            requete.exec();
+    }
+
+    if(!DataBase::instance().commit())                          /// Commit (seul accès à la base)
+    {
+        std::cerr << "Erreur mise à jour " << requete.lastError().text().toStdString()<< std::endl;
+        DataBase::instance().rollback();
+
+    }
+
+
+    delete liste;       /// @todo deleter tous les pointeurs de la liste
+    config.close();
+}
+
+
+
+
+
+/**
+  @brief liste les éléments de la base de données
+  utilise une requête select puis affiche les pathname de tous les fichiers
+*/
+void DataBase::listerFichiers()
+{
+
+    QSqlQuery query;
+    if(query.exec("SELECT filepath FROM " + QString(TFILES.c_str()) ) )
+    {
+        while(query.next())
+        {
+
+            for(int x=0; x < query.record().count(); ++x) /// pour chaque ligne de résultat de la requête...
+                cout<<boost::filesystem::path(query.value(x).toString().toStdString())<<endl;    /// Accepte le visiteur pour se faire afficher
+
+        }
+    }
+}
+
+
+/**
+  @brief liste les éléments de la base de données qui on des doublons de taille ( 1 fichier par taille )
+*/
+void DataBase::listerDoublonsTaille()
+{
+
+
+    QSqlQuery query;
+    if(query.exec("SELECT COUNT(size) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY size HAVING COUNT(size) > 1" ) )
+    {
+        //cout<<query.record().count()<<endl;
+        while(query.next())
+        {
+                boost::filesystem::path p(query.value(1).toString().toStdString());
+                cout<<"= > Taille "<<file_size(p)<< " octets : "<<endl;
+                QSqlQuery q;
+                q.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE size = ?");
+                q.addBindValue(quint64(file_size(p))); /// taille
+                if(q.exec())
+                {
+                    while(q.next())
+                    {
+                        cout<<"\t"+q.value(0).toString().toStdString()<<endl;
+                    }
+                }
+                else
+                {
+
+                    cout<<q.lastQuery().toStdString()<<endl;
+                    cout<<q.lastError().text().toStdString()<<endl;
+                }
+
+        }
+    }
+    else
+    {
+        cout<<query.lastError().text().toStdString()<<endl;
+    }
+}
+
+
+
+void DataBase::updateMD5(std::list<boost::filesystem::path *> &liste)
+{
+    DataBase::instance().transaction();
+
+    QSqlQuery requete;
+    boost::filesystem::path* fic;
+
+    /// Insert ou met à jour dans la base si la clé existe déjà
+    requete.prepare("UPDATE " + QString(TFILES.c_str()) + " SET md5sum=? WHERE filepath=?");
+
+    for(list<boost::filesystem::path*>::iterator it = liste.begin(); it != liste.end(); ++it)
+    {
+        fic = new boost::filesystem::path((*it)->c_str());
+        requete.addBindValue( QString(md5sum(*fic).c_str()) ); /// ajout de la clé md5
+        requete.addBindValue(fic->c_str()); /// ajout du filename
+        requete.exec();
+        //cout<<requete.executedQuery().toStdString()<<endl;
+
+    }
+
+    if(!DataBase::instance().commit())
+    {
+        std::cerr << "Erreur mise à jour " << requete.lastError().text().toStdString()<< std::endl;
+        DataBase::instance().rollback();
+
+    }
+
+
+}
+
+
+
+
+
+list<boost::filesystem::path *>& DataBase::getListSizeDuplicate(void)
+{
+    QSqlQuery query;
+    list<boost::filesystem::path*> *liste = new list<boost::filesystem::path*>();
+    boost::filesystem::path* p;
+
+    if(query.exec("select filepath from " + QString(TFILES.c_str()) + " where size in (select  size from " + QString(TFILES.c_str()) + " group by size having count(size) > 1)"))
+    {
+        //cout<<query.record().count()<<endl;
+        while(query.next())
+        {
+            try{
+                p = new boost::filesystem::path(query.value(0).toString().toStdString());
+                liste->push_back(p);
+                //cout<<(*liste.begin())->c_str()<<endl;
+            }
+            catch (const filesystem_error& ex)
+            {
+               cerr<<" Permission Denied !\n";
+            }
+
+        }
+    }
+    else
+    {
+        cout<<query.lastError().text().toStdString()<<endl;
+    }
+
+    //cout<<liste->size()<<endl;
+
+    return *liste;
+}
+
+
+
+
+
+
+/**
+  @brief liste les doublons de la base de données
+*/
+void DataBase::listerDoublons()
+{
+
+
+    QSqlQuery query;
+    if(query.exec("SELECT COUNT(md5sum) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY md5sum HAVING COUNT(md5sum) > 1" ) )
+    {
+        cout<<query.lastQuery().toStdString()<<endl;
+        while(query.next())
+        {
+                boost::filesystem::path p(query.value(1).toString().toStdString());
+                cout<<"= > clé md5 : "<<md5sum(p)<< " : "<<endl;
+                QSqlQuery q;
+                q.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE md5sum = ?");
+                q.addBindValue(QString(md5sum(p).c_str())); /// clé md5
+                if(q.exec())
+                {
+                    while(q.next())
+                    {
+                        cout<<"\t"+q.value(0).toString().toStdString()<<endl;
+                    }
+                }
+                else
+                {
+
+                    cout<<q.lastQuery().toStdString()<<endl;
+                    cout<<q.lastError().text().toStdString()<<endl;
+                }
+
+        }
+    }
+    else
+    {
+        cout<<query.lastError().text().toStdString()<<endl;
+    }
+}
+
+
+
+
+
+
+
+
+
 

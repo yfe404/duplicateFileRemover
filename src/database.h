@@ -12,12 +12,12 @@
 */
 
 class QSqlDatabase;
+class path;
 
 class DataBase
 {
 private:
     static std::string dataBaseCreator;
-    static std::string m_tableName;
     static std::string m_name;
 
     QSqlDatabase* father; // passé en argument car, si on hérite, la connexion ne marche plus (A VOIR !)
@@ -43,14 +43,53 @@ public:
         return instance;
     }
 
+    void update();
+    void listerFichiers();
+    void listerDoublonsTaille();
+    void listerDoublons();
+    void updateMD5(std::list<boost::filesystem::path*> &liste);
+    std::list<boost::filesystem::path *> &getListSizeDuplicate(void);
+
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
 
     ~DataBase();
+
+
+    bool commit();
+    bool rollback();
+    bool transaction();
+
+
 };
 
-/**
-  N.B : comme il s'agit d'un Singleton, nous ne pouvons utiliser la macro Q_OBJECT, et donc les signaux et slots.
-  Le constructeur d'un singleton ne prenant pas de paramètres, le constructeur explicit (ajouté par Qtcreator, par défaut) a également été supprimé
-*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #endif // DATABASE_H
