@@ -14,7 +14,6 @@
 
 
 
-
 using namespace boost::filesystem;
 
 /**
@@ -50,12 +49,20 @@ std::string md5sum(boost::filesystem::path file)
                                 file_descript,      /// descripteur de fichier du fichier à mapper
                                 0);                 /// pas d'offset
 
+
+        if(file_buffer == MAP_FAILED)                   /// gestion d'erreur du mmap
+        {
+            close(file_descript);                       /// fermeture du descripteur de fichier
+            throw std::runtime_error("");               /// On quitte par le gestionnaire d'exceptions
+        }
+
         result.addData(file_buffer, file_size(file));  /// ajout des données à "hasher"
+
 
         QString hash( result.result().toHex() );          /// récupération du hash sous forme de QString
 
-
         munmap(file_buffer, file_size(file));          /// libération du mapping
+
         close(file_descript);                           /// fermeture du fichier
         return hash.toStdString();                      /// le hash est retourné sous forme de std::string
 
@@ -72,7 +79,7 @@ std::string md5sum(boost::filesystem::path file)
 
 
 /**
-  @brief Ajoute un dossier et son contenu récursivement à une liste
+  @brief Ajoute les fichiers d'un dossier récursivement à une liste
 
   @param p le fichier/dossier à parcourir
   @param filesToAdd la liste qui va contenir le parcours de nos fichiers
@@ -83,46 +90,52 @@ std::string md5sum(boost::filesystem::path file)
 */
 void addContentRecursively(path &p, std::list<path *> *filesToAdd, Mode m, HiddenFiles h)
 {
-    directory_iterator end;
-    directory_iterator file(p);
+    try{
+        if(isForbidden(p))
+            return;
+        directory_iterator end;
+        directory_iterator file(p);
 
-    while(file != end)
-    {
-       try
-       {
-            if(m == recursive)
-            {
-                if(is_directory(*file) && !is_symlink(*file) && !isForbidden(*file) && ((!isHidden(*file)) ||(h == keep && isHidden(*file))) ) /// Si c'est un dossier et non un lien symbolique
-                {
-                    path dir(*file);
-                    addContentRecursively(dir, filesToAdd);      /// Pas besoin de rajouter le mode car recursif par défaut
-                }
-            }
-
-            if (is_regular_file(*file) && file_size(*file) > 0) /// Si c'est un fichier régulier
-            {
-                path *fic = new path(*file);                  /// Création d'un pointeur sur Path temporaire
-                if( (h == keep && isHidden(*file)) || !isHidden(*file)) /// selon le traitement qu'on a choisi pour les fichiers cachés
-                    filesToAdd->push_back(fic);  /// Ajout à la liste
-            }
-       }
-        catch (const filesystem_error& ex)
+        while(file != end)
         {
-            std::cerr << *file << " Permission Denied !\n";
-        }
+           try
+           {
+                if(m == recursive)
+                {
+                    if(is_directory(*file) && !is_symlink(*file) && ((!isHidden(*file)) ||(h == keep && isHidden(*file))) ) /// Si c'est un dossier et non un lien symbolique
+                    {
+                        path dir(*file);
+                        addContentRecursively(dir, filesToAdd);      /// Pas besoin de rajouter le mode car recursif par défaut
+                    }
 
-        ++file;
+                }
+
+                if (is_regular_file(*file) && file_size(*file) > 0) /// Si c'est un fichier régulier
+                {
+                    path *fic = new path(*file);                  /// Création d'un pointeur sur Path temporaire
+                    if( (h == keep && isHidden(*file)) || !isHidden(*file)) /// selon le traitement qu'on a choisi pour les fichiers cachés
+                        filesToAdd->push_back(fic);  /// Ajout à la liste
+                }
+           }
+            catch (const filesystem_error& ex)
+            {
+                std::cerr << *file << " Permission Denied !\n";
+            }
+
+            ++file;
+        }
+    }
+    catch (const filesystem_error& ex)
+    {
+        return;
     }
 }
 
 
 
 /**
-  @brief vérifie si un fichier donné est caché ou non
-
-  vérifier si le premier caractère du fichier est un '.'
-   (problème de portabilité ! => ce format que sous linux ! Comment faire pour windows ?)
-  Idées : convertir en qfileinfo (si méthode plus portable)
+  @brief vérifie si un fichier est caché ou non
+  Vérifie si le premier caractère du nom du fichier est un '.'
 */
 bool isHidden(path p) {
     std::string fileName = (p.filename()).string();
