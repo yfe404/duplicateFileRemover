@@ -2,7 +2,7 @@
 #include <iostream>
 #include<fstream>
 
-#include <QtGlobal>
+//#include <QtGlobal>
 
 #include "database.h"
 #include "extended_filesystem.h"
@@ -10,7 +10,7 @@
 #define TFILES string("TFILES")
 #define DATABASE_NAME string(string(getenv("USER")) + string(".db"))
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
-#define CREATE_FILE_DB string("echo -e \"CREATE TABLE IF NOT EXISTS " + TFILES  + " (filepath varchar(255) primary key, filename varchar(255), lastmodified varchar(255), size integer, md5sum varchar(255));\n\" | /usr/bin/sqlite3" +" " + DATABASE_NAME)
+#define CREATE_FILE_DB string("echo  \"CREATE TABLE IF NOT EXISTS " + TFILES  + " (filepath varchar(255) primary key, filename varchar(255), lastmodified varchar(255), size integer, md5sum varchar(255));\" | /usr/bin/sqlite3" +" " + DATABASE_NAME)
 
 using namespace std;
 using namespace boost::filesystem;
