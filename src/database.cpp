@@ -264,6 +264,8 @@ void DataBase::updateMD5(std::list<boost::filesystem::path *> &liste)
         requete.addBindValue(fic->c_str()); /// ajout du filename
         requete.exec();
         //cout<<requete.executedQuery().toStdString()<<endl;
+        delete fic;
+
 
     }
 
