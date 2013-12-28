@@ -12,6 +12,8 @@
 /// Inclusion pour mmap/unmap
 #include <sys/mman.h>
 
+/// Inclusion pour la vérification de la permission de lecture
+#include <QFileInfo>
 
 
 
@@ -19,6 +21,8 @@ using namespace boost::filesystem;
 
 std::string md5sum(boost::filesystem::path p)
 {
+
+
 
     try{
 
@@ -31,7 +35,7 @@ std::string md5sum(boost::filesystem::path p)
         file_descript = open(p.c_str(), O_RDONLY);   /// ouverture du fichier en lecture seule
         if(file_descript < 0)                            /// gestion de l'erreur d'ouverture
         {
-            std::cerr<<"open() : " << p.c_str()<<std::endl;
+            std::cerr<<p<<" : "<<strerror(errno)<<std::endl;
             return "";
         }
 
@@ -42,13 +46,18 @@ std::string md5sum(boost::filesystem::path p)
                                 MAP_PRIVATE,        /// le mapping n'est pas visible pour les autres processus
                                 file_descript,      /// descripteur de fichier du fichier à mapper
                                 0);                 /// pas d'offset
+        if(file_buffer == MAP_FAILED)
+        {
+            close(file_descript);
+            throw std::runtime_error("");
+        }
 
         result.addData(file_buffer, file_size(p));  /// ajout des données à "hasher"
 
         QString hash(result.result().toHex());          /// récupération du hash sous forme de QString
 
 
-        munmap(file_buffer, file_size(p));          /// libération du mapping
+        munmap(file_buffer, file_size(p));              /// libération du mapping
         close(file_descript);                           /// fermeture du fichier
         return hash.toStdString();                      /// le hash est retourné sous forme de std::string
 
@@ -56,6 +65,7 @@ std::string md5sum(boost::filesystem::path p)
 
     catch(...)                                          /// Attrape toutes les exceptions lancées
     {
+
         std::cerr<<"Can't compute md5sum : "<<p<<std::endl;
         return "";
     }
