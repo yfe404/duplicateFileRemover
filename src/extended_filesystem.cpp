@@ -23,6 +23,7 @@ using namespace boost::filesystem;
   @param file le fichier dont il va falloir calculer la clé md5
 
   @returns la clé md5 du fichier
+  @return "" chaine vide si erreur
 */
 std::string md5sum(boost::filesystem::path file)
 {
@@ -74,7 +75,7 @@ std::string md5sum(boost::filesystem::path file)
   @brief Ajoute un dossier et son contenu récursivement à une liste
 
   @param p le fichier/dossier à parcourir
-  @param liste la liste qui va contenir le parcours de nos fichiers
+  @param filesToAdd la liste qui va contenir le parcours de nos fichiers
   @param m le mode sélectionné pour le parcours (récursif ou normal)
   @param h le mode sélectionné pour le traitement des fichiers cachés (ajouté ou passés)
 
@@ -91,7 +92,7 @@ void addContentRecursively(path &p, std::list<path *> *filesToAdd, Mode m, Hidde
        {
             if(m == recursive)
             {
-                if(is_directory(*file) && !is_symlink(*file)) /// Si c'est un dossier et non un lien symbolique
+                if(is_directory(*file) && !is_symlink(*file) && !isForbidden(*file) && ((!isHidden(*file)) ||(h == keep && isHidden(*file))) ) /// Si c'est un dossier et non un lien symbolique
                 {
                     path dir(*file);
                     addContentRecursively(dir, filesToAdd);      /// Pas besoin de rajouter le mode car recursif par défaut
@@ -101,7 +102,7 @@ void addContentRecursively(path &p, std::list<path *> *filesToAdd, Mode m, Hidde
             if (is_regular_file(*file) && file_size(*file) > 0) /// Si c'est un fichier régulier
             {
                 path *fic = new path(*file);                  /// Création d'un pointeur sur Path temporaire
-                if( (h==keep && isHidden(*file)) || (!isHidden(*file)) ) /// selon le traitement qu'on a choisi pour les fichiers cachés
+                if( (h == keep && isHidden(*file)) || !isHidden(*file)) /// selon le traitement qu'on a choisi pour les fichiers cachés
                     filesToAdd->push_back(fic);  /// Ajout à la liste
             }
        }
@@ -145,11 +146,11 @@ bool isHidden(path p) {
   @return false sinon
 */
 bool isForbidden(path p){
-    path::iterator it = p.begin(); /// it ='/'
+    path::iterator pathMember = p.begin(); /// pathMember ='/'
 
-    ++it; /// le dossier après la racine
+    ++pathMember; /// le dossier après la racine
 
-    if (*it == "proc" || *it == "sys" || *it == "usr")
+    if (*pathMember == "proc" || *pathMember == "sys" || *pathMember == "usr" || *pathMember == "var") /// si le dossier est dans notre 'blacklist'
         return true;
 
     return false;
