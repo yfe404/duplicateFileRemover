@@ -65,7 +65,8 @@ void menu()
             DataBase::instance().update();       /// Met à jour la liste des fichiers de la BDD
         break;
         case 's' :
-            DataBase::instance().updateMD5(DataBase::instance().getListSizeDuplicate());   DataBase::instance().listerDoublons();   /// Met à jour la liste des fichiers de la BDD
+            DataBase::instance().updateMD5( DataBase::instance().getListSizeDuplicate() ); /// Met à jour les clés md5 pour les fichiers de même taille
+            DataBase::instance().listerDoublons(); /// liste les doublons en fonctions des clés md5
         break;
         case 'm' :
             afficherAide(); /// Affiche ce menu
@@ -83,12 +84,12 @@ void menu()
 
 void afficherAide()
 {
-    cout<<"Commande d'action"<<endl<<
-    "   l   lister les fichiers (sera remplacé par doublons) du dossier passé en paramètre"<<endl<<
-    "   d   lister les fichiers qui on des doublons de taille"<<endl<<
-    "   s   lister les doublons"<<endl<<
-    "   m   afficher ce menu"<<endl<<
-    "   u   mettre à jour la base de données"<<endl<<
-    "   q   quitter sans enrengistrer les changements"<<endl;
+    cout << "Commande d'action" << endl <<
+    "   l   lister les fichiers (sera remplacé par doublons) du dossier passé en paramètre"<< endl <<
+    "   d   lister les fichiers qui ont des doublons de taille"<< endl <<
+    "   s   lister les doublons parfaits" << endl <<
+    "   m   afficher ce menu" << endl <<
+    "   u   mettre à jour la base de données" << endl <<
+    "   q   quitter sans enrengistrer les changements" << endl;
 }
 

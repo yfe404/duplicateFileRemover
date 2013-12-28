@@ -8,7 +8,7 @@
 
 /**
  @class DataBase
- @brief classe singleton, héritant de QSqlDatabase, nous permettant de manipuler la base de données sqlite3
+ @brief classe singleton, basée sur QSqlDatabase, nous permettant de manipuler la base de données sqlite3
 */
 
 class QSqlDatabase;
@@ -43,24 +43,24 @@ public:
         return instance;
     }
 
-    void update();
-    void listerFichiers();
-    void listerDoublonsTaille();
-    void listerDoublons();
-    void updateMD5(std::list<boost::filesystem::path*> &liste);
-    std::list<boost::filesystem::path *> &getListSizeDuplicate(void);
+    void update(); /// met à jour la base de données en fonction du fichier de configuration
+
+    void listerFichiers(); /// liste le contenu de la base
+    void listerDoublonsTaille(); /// liste les fichiers ayant la même taille
+    void listerDoublons(); /// liste les doublons (selon différents critères)
+
+    void updateMD5(std::list<boost::filesystem::path*> &filesToUpdate);
+    std::list<boost::filesystem::path *> &getListSizeDuplicate();
 
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
-
-    ~DataBase();
 
 
     bool commit();
     bool rollback();
     bool transaction();
 
-
+    ~DataBase();
 };
 
 

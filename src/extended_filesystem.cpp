@@ -17,7 +17,14 @@
 
 using namespace boost::filesystem;
 
-std::string md5sum(boost::filesystem::path p)
+/**
+  @brief calcul de la clé md5sum pour un fichier donné
+
+  @param file le fichier dont il va falloir calculer la clé md5
+
+  @returns la clé md5 du fichier
+*/
+std::string md5sum(boost::filesystem::path file)
 {
 
     try{
@@ -25,30 +32,29 @@ std::string md5sum(boost::filesystem::path p)
         QCryptographicHash result(QCryptographicHash::Md5);
 
         int file_descript;     /// Descripteur de fichier correpondant au Path
-        char* file_buffer;     /// Pointeur sur la zone mémoire du fichier correpondant au Path
 
 
-        file_descript = open(p.c_str(), O_RDONLY);   /// ouverture du fichier en lecture seule
-        if(file_descript < 0)                            /// gestion de l'erreur d'ouverture
+        if( (file_descript = open(file.c_str(), O_RDONLY)) < 0)  /// ouverture du fichier en lecture seule
         {
-            std::cerr<<"open() : " << p.c_str()<<std::endl;
+            std::cerr << "open() : " << file.c_str() << std::endl;
             return "";
         }
 
+        char* file_buffer;     /// Pointeur sur la zone mémoire du fichier correpondant au Path
         file_buffer = (char*)mmap(                  /// "Projette" le fichier en mémoire
                                 0,                  /// laisse le noyau choisir la zone de mapping
-                                file_size(p),   /// taille du mapping
+                                file_size(file),   /// taille du mapping
                                 PROT_READ,          /// les pages peuvent être lues
                                 MAP_PRIVATE,        /// le mapping n'est pas visible pour les autres processus
                                 file_descript,      /// descripteur de fichier du fichier à mapper
                                 0);                 /// pas d'offset
 
-        result.addData(file_buffer, file_size(p));  /// ajout des données à "hasher"
+        result.addData(file_buffer, file_size(file));  /// ajout des données à "hasher"
 
-        QString hash(result.result().toHex());          /// récupération du hash sous forme de QString
+        QString hash( result.result().toHex() );          /// récupération du hash sous forme de QString
 
 
-        munmap(file_buffer, file_size(p));          /// libération du mapping
+        munmap(file_buffer, file_size(file));          /// libération du mapping
         close(file_descript);                           /// fermeture du fichier
         return hash.toStdString();                      /// le hash est retourné sous forme de std::string
 
@@ -56,7 +62,7 @@ std::string md5sum(boost::filesystem::path p)
 
     catch(...)                                          /// Attrape toutes les exceptions lancées
     {
-        std::cerr<<"Can't compute md5sum : "<<p<<std::endl;
+        std::cerr << "Can't compute md5sum : " << file << std::endl;
         return "";
     }
 
@@ -65,41 +71,46 @@ std::string md5sum(boost::filesystem::path p)
 
 
 /**
-  @brief Affiche un dossier et son contenu récursivement
-  */
-void addContentRecursively(path p, std::list<path *> *liste, mode m, hiddenFiles h)
+  @brief Ajoute un dossier et son contenu récursivement à une liste
+
+  @param p le fichier/dossier à parcourir
+  @param liste la liste qui va contenir le parcours de nos fichiers
+  @param m le mode sélectionné pour le parcours (récursif ou normal)
+  @param h le mode sélectionné pour le traitement des fichiers cachés (ajouté ou passés)
+
+  @return liste remplie (via le pointeur)
+*/
+void addContentRecursively(path &p, std::list<path *> *filesToAdd, Mode m, HiddenFiles h)
 {
-
-
     directory_iterator end;
-    directory_iterator it(p);
+    directory_iterator file(p);
 
-    while(it != end)
+    while(file != end)
     {
        try
        {
             if(m == recursive)
             {
-                if(is_directory(*it) && !is_symlink(*it)) /// Si c'est un dossier et non un lien symbolique
+                if(is_directory(*file) && !is_symlink(*file)) /// Si c'est un dossier et non un lien symbolique
                 {
-                    path dir(*it);
-                    addContentRecursively(dir, liste);      /// Pas besoin de rajouter le mode car recursif par défaut
+                    path dir(*file);
+                    addContentRecursively(dir, filesToAdd);      /// Pas besoin de rajouter le mode car recursif par défaut
                 }
             }
 
-            if (is_regular_file(*it) && file_size(*it) > 0) /// Si c'est un fichier régulier
+            if (is_regular_file(*file) && file_size(*file) > 0) /// Si c'est un fichier régulier
             {
-                path* fic = new path(*it);                  /// Création d'un pointeur sur Path temporaire
-                if((!isHidden(*it)) || (isHidden(*it) && h==keep))
-                    liste->push_back(fic);                      /// Ajout à la liste
+                path *fic = new path(*file);                  /// Création d'un pointeur sur Path temporaire
+                if( (h==keep && isHidden(*file)) || (!isHidden(*file)) ) /// selon le traitement qu'on a choisi pour les fichiers cachés
+                    filesToAdd->push_back(fic);  /// Ajout à la liste
             }
        }
         catch (const filesystem_error& ex)
         {
-            std::cerr << *it << " Permission Denied !\n";
+            std::cerr << *file << " Permission Denied !\n";
         }
 
-        ++it;
+        ++file;
     }
 }
 
