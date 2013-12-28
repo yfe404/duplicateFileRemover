@@ -36,7 +36,7 @@ int main()
 {
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
 
-    cout<<"debug"<<endl;
+
    menu();
     //test();
 
