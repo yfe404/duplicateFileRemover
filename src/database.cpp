@@ -10,7 +10,7 @@
 #define TFILES string("TFILES")
 #define DATABASE_NAME string(string(getenv("USER")) + string(".db"))
 #define CONFIGFILE ".config"        // path du fichier de configuration; sera bien entendu placé ailleur sur la version finale
-#define CREATE_FILE_DB string("echo  \"CREATE TABLE IF NOT EXISTS " + TFILES  + " (filepath varchar(255) primary key, filename varchar(255), lastmodified varchar(255), size integer, md5sum varchar(255));\" | /usr/bin/sqlite3" +" " + DATABASE_NAME)
+#define CREATE_FILE_DB string("echo  \"CREATE TABLE IF NOT EXISTS " + TFILES  + " (filepath varchar(255) primary key, parentpath varchar(255), filename varchar(255), lastmodified varchar(255), size integer, md5sum varchar(255));\" | /usr/bin/sqlite3" +" " + DATABASE_NAME)
 
 using namespace std;
 using namespace boost::filesystem;
@@ -156,11 +156,12 @@ void DataBase::update(){
     QSqlQuery requete;
 
     /// Insert ou met à jour dans la base si la clé existe déjà
-    requete.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?)");
+    requete.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?, ?)");
 
     for(list<boost::filesystem::path*>::iterator it = liste->begin(); it != liste->end(); ++it)
     {
             requete.addBindValue( (*it)->c_str() ); /// ajout du pathname
+            requete.addBindValue( (*it)->parent_path().c_str() ); /// ajout du pathname du parent
             requete.addBindValue((*it)->filename().c_str()); /// ajout du filename
             requete.addBindValue( quint64(last_write_time(*(*it)))  ); /// date de dernière modification
             requete.addBindValue(quint64(file_size(*(*it)))); /// taille

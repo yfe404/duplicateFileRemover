@@ -4,6 +4,7 @@
 #include<fstream>
 #include <QtSql>
 
+#include "extended_filesystem.h"
 
 
 
@@ -37,8 +38,7 @@ int main()
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
 
 
-   menu();
-    //test();
+    menu();
 
     return 0;
 }
@@ -92,3 +92,8 @@ void afficherAide()
     "   q   quitter sans enrengistrer les changements"<<endl;
 }
 
+void test(void)
+{
+              boost::filesystem::path p("/dev/kcore");
+              cout<<md5sum(p)<<endl;
+          }
