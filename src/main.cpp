@@ -29,6 +29,7 @@ void listerDoublons();
 void testMD5();
 
 void test(void);
+void testGetNbFiles(void);
 
 
 
@@ -36,7 +37,6 @@ void test(void);
 int main()
 {
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
-
 
     menu();
 
@@ -96,4 +96,20 @@ void test(void)
 {
               boost::filesystem::path p("/dev/kcore");
               cout<<md5sum(p)<<endl;
-          }
+}
+
+void testGetNbFiles(void)
+{
+
+    boost::filesystem::path p1("/home/yafeunteun");
+    cout<<p1<<" : "<<getNbFiles(p1, keep)<<" fichiers (incluant les fichiers cachés)\n";
+
+    boost::filesystem::path p4("/home/yafeunteun");
+    cout<<p4<<" : "<<getNbFiles(p4)<<" fichiers (excluant les fichiers cachés)\n";
+
+    boost::filesystem::path p2("/proc");
+    cout<<p2<<" : "<<getNbFiles(p2)<<" fichiers\n";
+
+    boost::filesystem::path p3("/proc/kcore");
+    cout<<p3<<" : "<<getNbFiles(p3)<<" fichiers\n";
+}

@@ -167,5 +167,45 @@ bool isForbidden(path p){
 }
 
 
+/**
+  @brief Retourne le nombre de fichiers reguliers contenus dans une réperoire.
 
+  @param p le reperoire à parcourir
+  @param h Définit la politique à adopter par rapport aux fichiers cachés : les ignorer ou non.
+  @return le nombre de fichiers réguliers du réperoire, -1 en cas d'erreur
+
+*/
+int getNbFiles(boost::filesystem::path p, hiddenFiles h)
+{
+    int cpt = 0;
+
+    try{
+        directory_iterator end;
+        directory_iterator it(p);
+
+        while(it != end)
+        {
+           try
+           {
+               if (((!isHidden(*it)) || (isHidden(*it) && h==keep)) && is_regular_file(*it) && file_size(*it) > 0) /// Si c'est un fichier régulier
+                {
+                    ++cpt;
+                }
+           }
+            catch (const filesystem_error& ex)
+            {
+               return -1;
+            }
+
+            ++it;
+        }
+    }
+    catch (const filesystem_error& ex)
+    {
+        return -1;
+    }
+
+    return cpt;
+
+}
 
