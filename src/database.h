@@ -20,7 +20,8 @@ private:
     static std::string dataBaseCreator;
     static std::string m_name;
 
-    QSqlDatabase* father; // passé en argument car, si on hérite, la connexion ne marche plus (A VOIR !)
+    QSqlDatabase* m_databaseobject;
+    QString m_lastError;          /// Contient la dernière erreur d'exécution décrite sous forme d'une chaine de caractères.
 
 
     /**
@@ -30,6 +31,7 @@ private:
     DataBase();
     DataBase (const DataBase&); /// Constructeur de copie (non-implémenté car singleton)
     void operator =(const DataBase&); /// Pour la meme raison que le constructeur de copie, l'opérateur de coppie ne sera pas implémenté
+    void setLastError(const QString& msg);   /// Remplit le champ de dernière erreur d'exécution
 
 public:
     const char* tableName() const; /// getter du nom de la table (testé, OK)
@@ -55,6 +57,7 @@ public:
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
 
+    const QString& lastError();
 
     bool commit();
     bool rollback();

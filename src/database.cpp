@@ -1,11 +1,12 @@
 #include <string>
 #include <iostream>
-#include<fstream>
+#include <fstream>
 
-//#include <QtGlobal>
 
 #include "database.h"
 #include "extended_filesystem.h"
+
+
 
 #define TFILES string("TFILES")
 #define DATABASE_NAME string(string(getenv("USER")) + string(".db"))
@@ -17,6 +18,7 @@ using namespace std;
 using namespace boost::filesystem;
 
 
+
 /**
   @brief Constructeur de la classe Singleton DataBase
   change les droits des scriptsqui vont etre executes et cree la base de données
@@ -25,23 +27,23 @@ using namespace boost::filesystem;
 */
 DataBase::DataBase()
 {
-    father = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
+    m_lastError = "";   /// Initialisation du champ d'erreur à chaine vide
 
+    m_databaseobject = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
 
     /** Appel du script pour créer la base de données sqlite */
 
     if(system(CREATE_FILE_DB.c_str()) == -1)
     {
-        cerr<<"Can't create database !"<<endl;
+        setLastError(QObject::tr("Impossible de créer la base de données, vérifiez que sqlite3 est bien installé sur votre ordinateur."));
+        return;
     }
 
     /** Paramétrage de la base de données */
-    father->setHostName("localhost");
-    father->setUserName( QString( getenv("USER")) );
-    father->setPassword("");
-    father->setDatabaseName( QString(DATABASE_NAME.c_str()) );
-
-    //cout << "La base s'appelle : " << m_name << endl;
+    m_databaseobject->setHostName("localhost");
+    m_databaseobject->setUserName( QString( getenv("USER")) );
+    m_databaseobject->setPassword("");
+    m_databaseobject->setDatabaseName( QString(DATABASE_NAME.c_str()) );
 }
 
 
@@ -56,13 +58,14 @@ DataBase::DataBase()
   @return false il y a eu un problème durant l'ouverture
 */
 bool DataBase::ouvrirDB(){
-    if( father->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
+    if( m_databaseobject->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
     {
-        //std::cout << "Vous êtes maintenant connecté à " << q2c(father->hostName()) << std::endl;
         return true;
     }
-    else {
-        std::cout << "La connexion a échouée, désolé :(" << std::endl << father->lastError().text().toStdString() << std::endl;
+    else
+    {
+        QString err = QObject::tr("Echec de connexion à la base de données : ") + m_databaseobject->lastError().text();
+        setLastError(err);
         return false;
     }
 }
@@ -73,26 +76,34 @@ bool DataBase::ouvrirDB(){
     Ferme la connexion à la base de données, libérant toutes les ressources acquises, et rendant invalide tout objet QQuery utilisant la base.
 */
 void DataBase::fermerDB(){
-    father->close();
+    m_databaseobject->close();
 }
 
+const QString& DataBase::lastError()
+{
+    return m_lastError;
+}
 
+void DataBase::setLastError(const QString& msg) /// @todo utiliser C++ 2011 pour éviter la recopie de la chaine passée en paramètre
+{
+    m_lastError = msg;
+}
 
 
 
 bool DataBase::commit()
 {
-    return father->commit();
+    return m_databaseobject->commit();
 }
 
 bool DataBase::rollback()
 {
-    return father->rollback();
+    return m_databaseobject->rollback();
 }
 
 bool DataBase::transaction()
 {
-    return father->transaction();
+    return m_databaseobject->transaction();
 }
 
 
@@ -100,31 +111,42 @@ bool DataBase::transaction()
 /**
   @brief Met à jour la base de données des fichiers.
 */
-void DataBase::update(){
 
+/// @todo doit accepter un nom de dossier, si aucun dossier n'est spécifié, mettre à jour à l'aide du fichier de configuration
+void DataBase::update(){
     /** Sélection des dossiers à scanner à l'aide du fichier de configuration */
     ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
 
     if(!config)
     {
-        cerr<<"Erreur ouverture fichier de configuration"<<endl;
+        setLastError(QObject::tr("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
     }
 
     string parcours_configfile;
 
     getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
-    if(parcours_configfile.size() == 0)
-        cerr<<"Fichier de configuration vide !"<<endl;
+
+    /// @todo les lignes commentées suivantes seront incluses dans une fonction de vérification du fichier de
+    ///configuration, voir les lignes suivantes pour plus d'informations sur cette fonction.
+    // if(parcours_configfile.size() == 0)
+        //cerr<<"Fichier de configuration vide !"<<endl;
 
 
 
     /** Récupération des dossiers sélectionnés, parcours et ajout à notre liste */
+
     list<boost::filesystem::path*> *lFiles = new list<boost::filesystem::path*>;
 
     while( parcours_configfile.size() != 0 )
     {
 
         boost::filesystem::path rep(parcours_configfile);
+
+        /// @todo les vérifications suivantes doivent êtres insérées dans une fonction qui fera la vérification
+        ///du fichier de configuration à chaque update et à chaque fin d'édition du fichier de configuration.
+        /// et eventuellemnt à chaque démarrage du programme dans le cas ou le fichier de configuration aurait
+        /// été édité à la main en dehors du programme.
+        /*
         try
         {
             if ( exists(rep) )    /// Si le chemin existe
@@ -138,6 +160,8 @@ void DataBase::update(){
             cerr << rep << " Permission Denied !\n";
         }
 
+        */
+
         getline(config, parcours_configfile); /// continue le parcours du fichier de configuration
     }
 
@@ -146,30 +170,29 @@ void DataBase::update(){
 
     DataBase::instance().transaction();       /// Début de transaction
 
-    QSqlQuery insertReplace;
+    QSqlQuery query;
 
-    insertReplace.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?)");    /// Insert ou met à jour dans la base si la clé existe déjà
+    query.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?)");    /// Insert ou met à jour dans la base si la clé existe déjà
 
 
     for(list<boost::filesystem::path*>::iterator file = lFiles->begin(); file != lFiles->end(); ++file)
     {
-            insertReplace.addBindValue( (*file)->c_str() ); /// ajout du pathname
-            insertReplace.addBindValue((*file)->filename().c_str()); /// ajout du filename
-            insertReplace.addBindValue( quint64(last_write_time(*(*file)))  ); /// date de dernière modification
-            insertReplace.addBindValue(quint64(file_size(*(*file)))); /// taille
-            insertReplace.addBindValue("");                   /// Vide pour le moment (future place de la clé md5)
+            query.addBindValue( (*file)->c_str() ); /// ajout du pathname
+            query.addBindValue((*file)->filename().c_str()); /// ajout du filename
+            query.addBindValue( quint64(last_write_time(*(*file)))  ); /// date de dernière modification
+            query.addBindValue(quint64(file_size(*(*file)))); /// taille
+            query.addBindValue("");                   /// Vide pour le moment (future place de la clé md5)
 
-            insertReplace.exec();
+            query.exec();
     }
 
     if(!DataBase::instance().commit())                          /// Commit (seul accès à la base)
     {
-        std::cerr << "Erreur mise à jour " << insertReplace.lastError().text().toStdString()<< std::endl;
         DataBase::instance().rollback();
-
+        setLastError(QObject::tr(qPrintable("Erreur de mise à jour de la base de données : " + query.lastError().text())));
     }
 
-
+    /// @todo Ces opération doivent être faites si l'on sort en cas d'erreur, il faudra donc gérer ce cas
     delete lFiles;       /// @todo deleter tous les pointeurs de la liste
     config.close();     /// fermeture du fichier de configuration
 }
@@ -182,7 +205,9 @@ void DataBase::update(){
   @brief liste les éléments de la base de données
   utilise une requête select puis affiche les pathname de tous les fichiers
 */
-//! @todo Remettre un affichage complet (modif le select ? rappeler les méthodes qui étaient appelées par le visiteur d'affichage)
+/// @todo Supprimer cette fonction qui n'aura plus lieu d'être car la console et la GUI on un affichage distinct qui ne
+/// être factorisé par une fonction telle que celle-ci
+
 void DataBase::listerFichiers()
 {
 
@@ -202,10 +227,11 @@ void DataBase::listerFichiers()
 /**
   @brief liste les éléments de la base de données qui ont des doublons de taille ( 1 fichier par taille )
 */
+/// @todo cette fonction prendra en paramètre une multimap de la stl, elle remplira la map se détachant ainsi de la tache
+/// d'affichage des résultats, à la charge de l'afficheur (qu'il soit console ou GUI).
+/// Dans un premier temps le résultat pourra être affiché dans cette fonction dans la version debug uniquement.
 void DataBase::listerDoublonsTaille()
 {
-
-
     QSqlQuery selectSize;
 
     if(selectSize.exec("SELECT COUNT(size) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY size HAVING COUNT(size) > 1" ) )
@@ -213,37 +239,47 @@ void DataBase::listerDoublonsTaille()
         //cout<<query.record().count()<<endl;
         while(selectSize.next())
         {
-                boost::filesystem::path file(selectSize.value(1).toString().toStdString());
+            /// Récupération des résultats de la requête sous forme de path
+            boost::filesystem::path file(selectSize.value(1).toString().toStdString());
 
-                cout << "= > Taille " << file_size(file) << " octets : " << endl;
+            //cout << "= > Taille " << file_size(file) << " octets : " << endl;
 
-                QSqlQuery selectEqualSize;
-                selectEqualSize.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE size = ?");
-                selectEqualSize.addBindValue(quint64(file_size(file))); /// taille
-                if(selectEqualSize.exec())
-                {
-                    while(selectEqualSize.next())
-                        cout << "\t" + selectEqualSize.value(0).toString().toStdString() << endl;
-                }
-                else
-                {
+            QSqlQuery selectEqualSize;
+            selectEqualSize.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE size = ?");
+            selectEqualSize.addBindValue(quint64(file_size(file))); /// taille
+            if(selectEqualSize.exec())
+            {
+                while(selectEqualSize.next())
+                    cout << "\t" + selectEqualSize.value(0).toString().toStdString() << endl;
+            }
+            else
+            {
 
-                    cout << selectEqualSize.lastQuery().toStdString() << endl;
-                    cout << selectEqualSize.lastError().text().toStdString() << endl;
-                }
+                // Debug => cout << selectEqualSize.lastQuery().toStdString() << endl;
+                setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + selectEqualSize.lastError().text()), "Recherche des doublons dans la base"));
+            }
 
         }
     }
 
     else
-        cout << selectSize.lastError().text().toStdString() << endl;
+        setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + selectSize.lastError().text()), "Recherche des doublons dans la base"));
 }
 
 
 
-/**
-  @brief misé à jour des clés md5
 
+
+
+
+
+
+/// @todo fusionner les fonctions updateMD5, getListSizeDuplicate, et listerDoublons dans une fonction
+/// rechercherFichiersDoublons(std::map<string, path>& map) avec string la clé md5.
+
+
+/**
+  @brief mise à jour des clés md5
   @param filesToUpdate liste des fichiers de la base dont il faut mettre à jour la valeur de la clé md5
 */
 void DataBase::updateMD5(std::list<boost::filesystem::path *> &filesToUpdate)
@@ -268,8 +304,8 @@ void DataBase::updateMD5(std::list<boost::filesystem::path *> &filesToUpdate)
 
     if(!DataBase::instance().commit())
     {
-        std::cerr << "Erreur mise à jour " << update.lastError().text().toStdString()<< std::endl;
         DataBase::instance().rollback();
+        setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + update.lastError().text()), "Recherche des doublons dans la base"));
     }
 }
 
@@ -283,31 +319,32 @@ void DataBase::updateMD5(std::list<boost::filesystem::path *> &filesToUpdate)
 */
 list<boost::filesystem::path *>& DataBase::getListSizeDuplicate()
 {
-    QSqlQuery selectEqualSize;
+    QSqlQuery query;
     list<boost::filesystem::path*> *equalsFile = new list<boost::filesystem::path*>(); // ATTENTION FUITE MÉMOIRE
     boost::filesystem::path *file;
 
-    if( selectEqualSize.exec("select filepath from " + QString(TFILES.c_str()) + " where size in (select  size from " + QString(TFILES.c_str()) + " group by size having count(size) > 1)") )
+    if( query.exec("select filepath from " + QString(TFILES.c_str()) + " where size in (select  size from " + QString(TFILES.c_str()) + " group by size having count(size) > 1)") )
     {
         //cout<<query.record().count()<<endl;
-        while(selectEqualSize.next())
+        while(query.next())
         {
             try{
-                file = new boost::filesystem::path(selectEqualSize.value(0).toString().toStdString());
+                file = new boost::filesystem::path(query.value(0).toString().toStdString());
                 equalsFile->push_back(file);
                 //cout<<(*liste.begin())->c_str()<<endl;
             }
             catch (const filesystem_error& ex)
             {
-               cerr<<" Permission Denied !\n";
+               // debug => cerr<<" Permission Denied !\n";
             }
 
         }
     }
     else
-        cout<<selectEqualSize.lastError().text().toStdString()<<endl;
+        setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + query.lastError().text()), "Recherche des doublons dans la base"));
 
-    //cout<<liste->size()<<endl;
+    // Debug => cout<<liste->size()<<endl;
+
 
     return *equalsFile;
 }
@@ -357,9 +394,8 @@ void DataBase::listerDoublons()
 
 /**
   @brief Destructeur
-  Détruit le père (QSqlDatabase)
 */
 DataBase::~DataBase()
 {
-    delete father;
+    delete m_databaseobject;
 }
