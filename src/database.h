@@ -54,7 +54,7 @@ public:
     void updateMD5(std::list<boost::filesystem::path*> &filesToUpdate);
     std::list<boost::filesystem::path *> &getListSizeDuplicate();
 
-    bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
+    void ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
 
     const QString& lastError();

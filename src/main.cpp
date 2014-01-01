@@ -61,8 +61,6 @@ int main(int argc, char* argv[])
 
    menu();
 
-
-
    return app.exec();
 }
 

@@ -9,6 +9,7 @@
 #ifndef QT_NO_DEBUG                         /// indique que l'on est en mode debug
 #define DEBUG(msg) qDebug(qPrintable(msg))
 #define FATAL_ERROR(msg) qFatal(qPrintable(msg))
+#define CRITICAL(msg) qCritical(qPrintable(msg))
 #else
 #define debug(msg)
 #define critical(msg)
@@ -56,10 +57,15 @@ DataBase::DataBase()
     }
 
     /** Paramétrage de la base de données */
+    DEBUG(QObject::trUtf8("Configuration de la base de données"));
     m_databaseobject->setHostName("localhost");
-    m_databaseobject->setUserName( QString( getenv("USER")) );
+    DEBUG(QObject::trUtf8(qPrintable("Nom d'hôte : " + m_databaseobject->hostName())));
+    m_databaseobject->setUserName( QString( getenv("USER")));
+    DEBUG(QObject::trUtf8(qPrintable("Nom d'utilisateur : " + m_databaseobject->userName())));
     m_databaseobject->setPassword("");
+    DEBUG(QObject::trUtf8(qPrintable("Mot de passe : " + m_databaseobject->password())));
     m_databaseobject->setDatabaseName( QString(DATABASE_NAME.c_str()) );
+    DEBUG(QObject::trUtf8(qPrintable("Nom de la base de données : " + m_databaseobject->databaseName())));
 }
 
 
@@ -73,17 +79,19 @@ DataBase::DataBase()
   @return true la base est ouverte
   @return false il y a eu un problème durant l'ouverture
 */
-bool DataBase::ouvrirDB(){
-    if( m_databaseobject->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
+void DataBase::ouvrirDB()
+{
+    DEBUG(QObject::trUtf8("Ouverture de la base de données"));
+
+    if( !m_databaseobject->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
     {
-        return true;
-    }
-    else
-    {
-        QString err = QObject::trUtf8("Echec de connexion à la base de données : ") + m_databaseobject->lastError().text();
+        /// @todo Le programme devra quitter dans ce cas.
+        FATAL_ERROR(QObject::trUtf8("Echec ouverture de la base de données", "ouvrirDB()"));
+        QString err = QObject::trUtf8("Echec ouverture de la base de données : ") + m_databaseobject->lastError().text();
         setLastError(err);
-        return false;
+        return ;
     }
+
 }
 
 
@@ -92,6 +100,7 @@ bool DataBase::ouvrirDB(){
     Ferme la connexion à la base de données, libérant toutes les ressources acquises, et rendant invalide tout objet QQuery utilisant la base.
 */
 void DataBase::fermerDB(){
+    DEBUG(QObject::trUtf8("Fermeture de la base de données"));
     m_databaseobject->close();
 }
 
@@ -102,6 +111,7 @@ const QString& DataBase::lastError()
 
 void DataBase::setLastError(const QString& msg) /// @todo utiliser C++ 2011 pour éviter la recopie de la chaine passée en paramètre
 {
+    DEBUG(QObject::trUtf8(qPrintable("DataBase::setLastError : " + msg)));
     m_lastError = msg;
 }
 
@@ -109,16 +119,19 @@ void DataBase::setLastError(const QString& msg) /// @todo utiliser C++ 2011 pour
 
 bool DataBase::commit()
 {
+    DEBUG(QObject::trUtf8("DataBase::commit()"));
     return m_databaseobject->commit();
 }
 
 bool DataBase::rollback()
 {
+    DEBUG(QObject::trUtf8("DataBase::rollback()"));
     return m_databaseobject->rollback();
 }
 
 bool DataBase::transaction()
 {
+    DEBUG(QObject::trUtf8("DataBase::transaction()"));
     return m_databaseobject->transaction();
 }
 
@@ -129,8 +142,12 @@ bool DataBase::transaction()
 */
 
 /// @todo doit accepter un nom de dossier, si aucun dossier n'est spécifié, mettre à jour à l'aide du fichier de configuration
-void DataBase::update(){
-    /** Sélection des dossiers à scanner à l'aide du fichier de configuration */
+void DataBase::update()
+{
+
+    DEBUG(QObject::trUtf8("Tentative de mise à jour de la base de données", "DataBase::update()"));
+
+    DEBUG(QObject::trUtf8("Sélection des dossiers à scanner à l'aide du fichier de configuration"));
     ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
 
     if(!config)
@@ -140,6 +157,7 @@ void DataBase::update(){
 
     string parcours_configfile;
 
+    DEBUG(QObject::trUtf8("Lecture d'une ligne du fichier de configuration"));
     getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
 
     /// @todo les lignes commentées suivantes seront incluses dans une fonction de vérification du fichier de
@@ -152,22 +170,24 @@ void DataBase::update(){
     /** Récupération des dossiers sélectionnés, parcours et ajout à notre liste */
 
     list<boost::filesystem::path*> *lFiles = new list<boost::filesystem::path*>;
+    Q_ASSERT_X(lFiles!=NULL, "DataBase::update()", "lFiles == NULL");
 
     while( parcours_configfile.size() != 0 )
     {
-
         boost::filesystem::path rep(parcours_configfile);
+        DEBUG(QObject::trUtf8(qPrintable("Parcours du dossier " + QString(rep.c_str()))));
 
-        /// @todo les vérifications suivantes doivent êtres insérées dans une fonction qui fera la vérification
+        /// @todo les vérifications suivantes (lignes commentées doivent êtres insérées dans une fonction qui fera la vérification
         ///du fichier de configuration à chaque update et à chaque fin d'édition du fichier de configuration.
         /// et eventuellemnt à chaque démarrage du programme dans le cas ou le fichier de configuration aurait
         /// été édité à la main en dehors du programme.
         /*
         try
         {
-            if ( exists(rep) )    /// Si le chemin existe
-               addContentRecursively(rep, lFiles, recursive); /// ajout des fichiers de manière récursive (ou pas) à la liste
-
+            if ( exists(rep) )    /// Si le chemin existe*/
+        DEBUG(QObject::trUtf8(qPrintable("Ajout des fichiers de " + QString(rep.c_str())+ " à la liste des fichiers")));
+        addContentRecursively(rep, lFiles, recursive);
+        /*
             else
               cout << rep << " does not exist\n";
         }
@@ -177,19 +197,22 @@ void DataBase::update(){
         }
 
         */
-
-        getline(config, parcours_configfile); /// continue le parcours du fichier de configuration
+        DEBUG(QObject::trUtf8("Lecture d'une ligne du fichier de configuration"));
+        getline(config, parcours_configfile);
     }
 
+    DEBUG(QObject::trUtf8("Fin de lecture du fichier de configuration"));
+    DEBUG(QObject::trUtf8("Nombre de fichiers trouvés : %n", "", lFiles->size()));
 
-    /** Ajout à la base de données */
 
-    DataBase::instance().transaction();       /// Début de transaction
 
+    DEBUG(QObject::trUtf8("Tentative d'ajout des fichiers à la base de données"));
+
+    DataBase::instance().transaction();
     QSqlQuery query;
 
     query.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?)");    /// Insert ou met à jour dans la base si la clé existe déjà
-
+    DEBUG(QObject::trUtf8(qPrintable("Requête lancée : " + query.lastQuery() )));
 
     for(list<boost::filesystem::path*>::iterator file = lFiles->begin(); file != lFiles->end(); ++file)
     {
@@ -202,15 +225,18 @@ void DataBase::update(){
             query.exec();
     }
 
-    if(!DataBase::instance().commit())                          /// Commit (seul accès à la base)
+    if(!DataBase::instance().commit())
     {
         DataBase::instance().rollback();
+        CRITICAL(QObject::trUtf8(qPrintable("Erreur d'ajout à la base de données : " + query.lastError().text() )));
         setLastError(QObject::trUtf8(qPrintable("Erreur de mise à jour de la base de données : " + query.lastError().text())));
     }
 
     /// @todo Ces opération doivent être faites si l'on sort en cas d'erreur, il faudra donc gérer ce cas
     delete lFiles;       /// @todo deleter tous les pointeurs de la liste
-    config.close();     /// fermeture du fichier de configuration
+
+    DEBUG(QObject::trUtf8("Fermeture du fichier de configuration"));
+    config.close();
 }
 
 
@@ -413,5 +439,6 @@ void DataBase::listerDoublons()
 */
 DataBase::~DataBase()
 {
+    DEBUG(QObject::trUtf8("Appel du destructeur du singleton DataBase"));
     delete m_databaseobject;
 }
