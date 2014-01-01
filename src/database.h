@@ -48,7 +48,9 @@ public:
     void listerDoublonsTaille();
     void listerDoublons();
     void updateMD5(std::list<boost::filesystem::path*> &liste);
+    //void updateDIRMD(std::list<boost::filesystem::path*> &liste);
     std::list<boost::filesystem::path *> &getListSizeDuplicate(void);
+    std::list<boost::filesystem::path *> &getListParents(void); /// Liste des dossiers qui ne contiennent que des doublons potentiels
 
     bool ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
     void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)

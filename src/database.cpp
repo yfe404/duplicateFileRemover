@@ -363,6 +363,56 @@ void DataBase::listerDoublons()
 }
 
 
+std::list<boost::filesystem::path *>& DataBase::getListParents(void)
+{
+    QSqlQuery query;
+    list<boost::filesystem::path*> *liste = new list<boost::filesystem::path*>();
+    boost::filesystem::path* p;
+
+    if(query.exec("SELECT DISTINCT parentpath FROM " + QString(TFILES.c_str()) + " WHERE md5sum != \"\""))
+    {
+        //cout<<query.record().count()<<endl;
+        while(query.next())
+        {
+            try{
+                p = new boost::filesystem::path(query.value(0).toString().toStdString());
+                QSqlQuery q;
+                q.prepare("SELECT COUNT(md5sum) FROM " + QString(TFILES.c_str()) + " WHERE parentpath = ?");
+                q.addBindValue(QString(p->c_str())); /// Nombre de clé ayant pour parent p
+                if(q.exec())
+                {
+                    while(q.next()) /// Un seul résultat donc un seul passage dans la boucle
+                    {
+                        //cout<<"\t"+q.value(0).toString().toStdString()<<endl;
+                        if(q.value(0).toInt() == getNbFiles(*p))
+                            liste->push_back(p);
+                            //cout<<*p<<endl;
+                    }
+                }
+                else
+                {
+
+                    cout<<q.lastQuery().toStdString()<<endl;
+                    cout<<q.lastError().text().toStdString()<<endl;
+                }
+
+            }
+            catch (const filesystem_error& ex)
+            {
+               cerr<<" Permission Denied !\n";
+            }
+
+
+        }
+    }
+    else
+    {
+        cout<<query.lastError().text().toStdString()<<endl;
+    }
+
+    cout<<liste->size()<<endl;
+    return *liste;
+}
 
 
 

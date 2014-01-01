@@ -67,6 +67,9 @@ void menu()
         case 's' :
             DataBase::instance().updateMD5(DataBase::instance().getListSizeDuplicate());   DataBase::instance().listerDoublons();   /// Met à jour la liste des fichiers de la BDD
         break;
+        case 'k' :
+            DataBase::instance().getListParents();
+        break;
         case 'm' :
             afficherAide(); /// Affiche ce menu
         break;
@@ -87,6 +90,7 @@ void afficherAide()
     "   l   lister les fichiers (sera remplacé par doublons) du dossier passé en paramètre"<<endl<<
     "   d   lister les fichiers qui on des doublons de taille"<<endl<<
     "   s   lister les doublons"<<endl<<
+    "   k   afficher les dossiers doublons"<<endl<<
     "   m   afficher ce menu"<<endl<<
     "   u   mettre à jour la base de données"<<endl<<
     "   q   quitter sans enrengistrer les changements"<<endl;
