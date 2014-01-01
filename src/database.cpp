@@ -1,10 +1,20 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-
+#include <QDebug>
 
 #include "database.h"
 #include "extended_filesystem.h"
+
+#ifndef QT_NO_DEBUG                         /// indique que l'on est en mode debug
+#define DEBUG(msg) qDebug(qPrintable(msg))
+#define FATAL_ERROR(msg) qFatal(qPrintable(msg))
+#else
+#define debug(msg)
+#define critical(msg)
+#endif
+
+
 
 
 
@@ -21,21 +31,27 @@ using namespace boost::filesystem;
 
 /**
   @brief Constructeur de la classe Singleton DataBase
-  change les droits des scriptsqui vont etre executes et cree la base de données
+  cree la base de données
   Grâce au pattern Singleton, il ne sera qu'une seule et unique fois (au premier appel d'une instance de DataBase)
   Ce pattern est utilisé car chaque utilisateur utilisant ce programme aura une seule et unique base de données contenant les informations sur ses fichiers
 */
 DataBase::DataBase()
 {
+    DEBUG(QObject::trUtf8("Appel du constructeur de DataBase", "Constructeur de la base de données"));
     m_lastError = "";   /// Initialisation du champ d'erreur à chaine vide
 
     m_databaseobject = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
+    Q_ASSERT_X(m_databaseobject!=NULL, "DataBase::DataBase()", "m_lastError == NULL");    /// Quitte le programme si le pointeur vaut NULL
+
 
     /** Appel du script pour créer la base de données sqlite */
 
+    DEBUG(QObject::trUtf8("Création de la base de données", "Constructeur de la base de données"));
     if(system(CREATE_FILE_DB.c_str()) == -1)
     {
-        setLastError(QObject::tr("Impossible de créer la base de données, vérifiez que sqlite3 est bien installé sur votre ordinateur."));
+        /// @todo Le programme devra quitter si la base de donnée n'a pas pu être créée.
+        FATAL_ERROR(QObject::trUtf8("Echec de création de la base de données", "Constructeur de la base de données"));
+        setLastError(QObject::trUtf8("Impossible de créer la base de données, vérifiez que sqlite3 est bien installé sur votre ordinateur."));
         return;
     }
 
@@ -64,7 +80,7 @@ bool DataBase::ouvrirDB(){
     }
     else
     {
-        QString err = QObject::tr("Echec de connexion à la base de données : ") + m_databaseobject->lastError().text();
+        QString err = QObject::trUtf8("Echec de connexion à la base de données : ") + m_databaseobject->lastError().text();
         setLastError(err);
         return false;
     }
@@ -119,7 +135,7 @@ void DataBase::update(){
 
     if(!config)
     {
-        setLastError(QObject::tr("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
+        setLastError(QObject::trUtf8("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
     }
 
     string parcours_configfile;
@@ -189,7 +205,7 @@ void DataBase::update(){
     if(!DataBase::instance().commit())                          /// Commit (seul accès à la base)
     {
         DataBase::instance().rollback();
-        setLastError(QObject::tr(qPrintable("Erreur de mise à jour de la base de données : " + query.lastError().text())));
+        setLastError(QObject::trUtf8(qPrintable("Erreur de mise à jour de la base de données : " + query.lastError().text())));
     }
 
     /// @todo Ces opération doivent être faites si l'on sort en cas d'erreur, il faudra donc gérer ce cas
@@ -256,14 +272,14 @@ void DataBase::listerDoublonsTaille()
             {
 
                 // Debug => cout << selectEqualSize.lastQuery().toStdString() << endl;
-                setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + selectEqualSize.lastError().text()), "Recherche des doublons dans la base"));
+                setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectEqualSize.lastError().text()), "Recherche des doublons dans la base"));
             }
 
         }
     }
 
     else
-        setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + selectSize.lastError().text()), "Recherche des doublons dans la base"));
+        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectSize.lastError().text()), "Recherche des doublons dans la base"));
 }
 
 
@@ -305,7 +321,7 @@ void DataBase::updateMD5(std::list<boost::filesystem::path *> &filesToUpdate)
     if(!DataBase::instance().commit())
     {
         DataBase::instance().rollback();
-        setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + update.lastError().text()), "Recherche des doublons dans la base"));
+        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + update.lastError().text()), "Recherche des doublons dans la base"));
     }
 }
 
@@ -341,7 +357,7 @@ list<boost::filesystem::path *>& DataBase::getListSizeDuplicate()
         }
     }
     else
-        setLastError(QObject::tr(qPrintable("Erreur d'accès à la base de donnée " + query.lastError().text()), "Recherche des doublons dans la base"));
+        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + query.lastError().text()), "Recherche des doublons dans la base"));
 
     // Debug => cout<<liste->size()<<endl;
 

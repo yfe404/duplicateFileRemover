@@ -3,13 +3,12 @@
 #include <iostream>
 #include<fstream>
 #include <QtSql>
-
+#include <QApplication>
 
 
 
 //La macro-définition q2c est simplement faite pour faciliter la conversion de QString vers std::string
 #define q2c(string) string.toStdString()
-
 
 
 
@@ -32,15 +31,39 @@ void test(void);
 
 
 
-int main()
+int main(int argc, char* argv[])
 {
+
+    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
+    QTextCodec::setCodecForTr(QTextCodec::codecForName("UTF-8"));
+
+    QApplication app(argc, argv);
+
+    QTranslator translator;
+
+    int choice;
+    cout<<"Choose a language : 0 for english, 1 for french (default english)."<<endl;
+    cin >> choice;
+
+    switch(choice)
+    {
+        case 0 :
+            translator.load(QString("test_database_en"));
+        break;
+        default :
+            translator.load(QString("test_database_fr"));
+
+    }
+
+    app.installTranslator(&translator);
+
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
 
-
    menu();
-    //test();
 
-    return 0;
+
+
+   return app.exec();
 }
 
 
