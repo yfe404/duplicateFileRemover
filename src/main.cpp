@@ -72,7 +72,7 @@ void menu()
 
     while(choix!='q')
     {
-        cout<<"Commande (m pour l'aide): ";
+        cout << QObject::trUtf8("Commande (m pour l'aide) : ").toStdString();
         scanf("%c%*c", &choix); // CODERET A GERER (réglerait le problème qui suit ?)  // Problème : si l'utilisateur entre une chaine de caractères, pas géré ! => prend 1car/2 de la chaine (alors qu'il faudrait mettre un message d'erreur !)
         switch(choix)
         {
@@ -96,7 +96,7 @@ void menu()
             return;         /// Quitte le programme
         break;
         default:
-            cout<<choix<<" : commande inconnue"<<endl;  /// Par défaut affiche commande inconnue
+            cout<<choix<<QObject::trUtf8(" : commande inconnue").toStdString()<<endl;  /// Par défaut affiche commande inconnue
 
         }
     }
@@ -105,12 +105,12 @@ void menu()
 
 void afficherAide()
 {
-    cout << "Commande d'action" << endl <<
-    "   l   lister les fichiers (sera remplacé par doublons) du dossier passé en paramètre"<< endl <<
-    "   d   lister les fichiers qui ont des doublons de taille"<< endl <<
-    "   s   lister les doublons parfaits" << endl <<
-    "   m   afficher ce menu" << endl <<
-    "   u   mettre à jour la base de données" << endl <<
-    "   q   quitter sans enrengistrer les changements" << endl;
+    cout << QObject::trUtf8("Commande d'action").toStdString() << endl <<
+    QObject::trUtf8("   l   lister les fichiers").toStdString()<< endl <<
+    QObject::trUtf8("   d   lister les fichiers qui ont des doublons de taille").toStdString()<< endl <<
+    QObject::trUtf8("   s   lister les doublons parfaits").toStdString() << endl <<
+    QObject::trUtf8("   m   afficher ce menu").toStdString() << endl <<
+    QObject::trUtf8("   u   mettre à jour la base de données").toStdString() << endl <<
+    QObject::trUtf8("   q   quitter").toStdString() << endl;
 }
 

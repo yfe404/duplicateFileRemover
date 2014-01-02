@@ -121,5 +121,58 @@
         <source>Erreur ouverture fichier de configuration, veuillez choisir &apos;Configurer&apos; dans le menu principal pour remédier à ce problème.</source>
         <translation>Failed to open configuration file, please choose &apos;Settings&apos; in the main menu to overcome this issue.</translation>
     </message>
+    <message>
+        <source>Commande : </source>
+        <translation type="obsolete">Command : </translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="75"/>
+        <source>Commande (m pour l&apos;aide) : </source>
+        <translation>Command (m for help) : </translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="99"/>
+        <source> : commande inconnue</source>
+        <translation> : unknown command</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="108"/>
+        <source>Commande d&apos;action</source>
+        <translation>Action commands</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="109"/>
+        <source>   l   lister les fichiers</source>
+        <translation>   l   list files</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="110"/>
+        <source>   d   lister les fichiers qui ont des doublons de taille</source>
+        <translation>   d   list duplicate size files</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="111"/>
+        <source>   s   lister les doublons parfaits</source>
+        <translation>   s   list duplicate content files</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="112"/>
+        <source>   m   afficher ce menu</source>
+        <translation>   m   diplay this menu</translation>
+    </message>
+    <message utf8="true">
+        <location filename="main.cpp" line="113"/>
+        <source>   u   mettre à jour la base de données</source>
+        <translation>   u   update database</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="114"/>
+        <source>   q   quitter</source>
+        <translation>   q   quit</translation>
+    </message>
+    <message>
+        <source>   q   quitter sans enrengistrer les changements</source>
+        <translation type="obsolete">   q   quit</translation>
+    </message>
 </context>
 </TS>
