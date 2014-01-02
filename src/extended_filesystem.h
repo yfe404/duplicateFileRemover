@@ -4,6 +4,7 @@
 #include <string>
 #include <list>
 
+using boost::filesystem::path;
 
 enum Mode {normal, recursive};
 enum HiddenFiles {skip, keep};

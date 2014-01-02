@@ -91,18 +91,14 @@ DataBase::DataBase()
 /**
   @brief ouverture de la base de données
 
-  Ouvre la base de données et affiche un message en fonction du bon fonctionnement (ou non) de la méthode.
-
-  @return true la base est ouverte
-  @return false il y a eu un problème durant l'ouverture
+  Ouvre la base de données (en appelant la méthode de QSqlDatabase) et affiche un message en fonction du bon fonctionnement (ou non) de la méthode.
 */
 void DataBase::ouvrirDB()
 {
     DEBUG(QObject::trUtf8("Ouverture de la base de données"));
 
-    if( !m_databaseobject->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
+    if( !m_databaseobject->open() )
     {
-        /// @todo Le programme devra quitter dans ce cas. // qFatal quitte automatiquement le programme (en faisant un core dump sous unix)
         FATAL_ERROR(QObject::trUtf8("Echec ouverture de la base de données", "ouvrirDB()")); /// quitte le programme (via qFatal) en affichant un message d'erreur
         QString err = QObject::trUtf8("Echec ouverture de la base de données : ") + m_databaseobject->lastError().text();
         setLastError(err);
@@ -120,6 +116,7 @@ void DataBase::fermerDB(){
     DEBUG(QObject::trUtf8("Fermeture de la base de données"));
     m_databaseobject->close();
 }
+
 
 const QString& DataBase::lastError()
 {
@@ -165,7 +162,7 @@ void DataBase::update()
     DEBUG(QObject::trUtf8("Tentative de mise à jour de la base de données", "DataBase::update()"));
 
     DEBUG(QObject::trUtf8("Sélection des dossiers à scanner à l'aide du fichier de configuration"));
-    std::ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
+    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
 
     if(!config)
     {
@@ -260,14 +257,15 @@ void DataBase::update()
 
 
 /// @todo fusionner les fonctions updateMD5, getListSizeDuplicate, et listerDoublons dans une fonction
-/// rechercherFichiersDoublons(std::map<string, path>& map) avec string la clé md5.
+// APPELER plutôt que fusionner non ? (évite les fonctions trop longues)
+/// rechercherFichiersDoublons(std::map<string, path>& map) avec string la clé md5. // multimap du coup ?
 
 
 /**
   @brief mise à jour des clés md5
   @param filesToUpdate liste des fichiers de la base dont il faut mettre à jour la valeur de la clé md5
 */
-void DataBase::updateMD5(std::list<path *> &filesToUpdate)
+void DataBase::updateMD5(list<path *> &filesToUpdate)
 {
     DataBase::instance().transaction(); /// début de la transaction
 
@@ -339,7 +337,7 @@ list<path *>& DataBase::getListSizeDuplicate()
 
 
 
-void DataBase::rechercherDoublons(std::multimap<std::string, path*> map)
+void DataBase::rechercherDoublons(std::multimap<string, path*> map)
 {
     DEBUG(QObject::trUtf8("Mise à jour des clés md5 des fichiers de tailles équivalentes"));
     list<path *> dupSize;
@@ -359,7 +357,7 @@ void DataBase::rechercherDoublons(std::multimap<std::string, path*> map)
         while(selectGroupMd5.next())
         {
                 path p(selectGroupMd5.value(1).toString().toStdString());
-                std::string key = md5sum(p);
+                string key = md5sum(p);
                 DEBUG(QObject::trUtf8("Nouvelle clé calculée : ") + qPrintable(key.c_str()));
 
                 QSqlQuery selectDoublons;
@@ -374,7 +372,7 @@ void DataBase::rechercherDoublons(std::multimap<std::string, path*> map)
                     {
                         path *fic = new path(selectGroupMd5.value(1).toString().toStdString());
                         Q_ASSERT_X(fic!=NULL, "DataBase::rechercherDoublons()", "fic == NULL");    /// Quitte le programme si le pointeur vaut NULL
-                        map.insert(std::pair<std::string,path*> (key, fic));
+                        map.insert(std::pair<string,path*> (key, fic));
                     }
 
                 }
@@ -399,6 +397,7 @@ void DataBase::rechercherDoublons(std::multimap<std::string, path*> map)
   @return true si le fichier de configuration est valide
   @return false sinon
 */
+/// @todo utiliser la méthode dans update (plutôt que de parcourir 2 fois le fichier)
 bool DataBase::verifierConfiguration()
 {
     DEBUG(QObject::trUtf8("Tentative d'ouverture du fichier de configuration"));

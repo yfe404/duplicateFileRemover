@@ -36,7 +36,7 @@ std::string md5sum(path file)
 
         if( (file_descript = open(file.c_str(), O_RDONLY)) < 0)  /// ouverture du fichier en lecture seule
         {
-            std::cerr << "open() : " << file.c_str() << std::endl;
+            std::cerr << "open() : " << file.c_str() << std::endl; // NE MARCHE PAS AVEC LES ACCENTS (pour l'affichage)
             return "";
         }
 
@@ -83,16 +83,17 @@ std::string md5sum(path file)
 
   @param p le fichier/dossier à parcourir
   @param filesToAdd la liste qui va contenir le parcours de nos fichiers
-  @param m le mode sélectionné pour le parcours (récursif ou normal)
-  @param h le mode sélectionné pour le traitement des fichiers cachés (ajouté ou passés)
+  @param m le mode sélectionné pour le parcours (récursif ou normal). Par défaut : récursif
+
+  @param h le mode sélectionné pour le traitement des fichiers cachés (ajouté ou passés). Par défaut : skip
 
   @return liste remplie (via le pointeur)
 */
 void addContentRecursively(path &p, std::list<path *> *filesToAdd, Mode m, HiddenFiles h)
 {
     try{
-        if(isForbidden(p))
-            return;
+        if(isForbidden(p)) /// si le dossier fait partie de notre blacklist...
+            return; /// on passe a suivant
         directory_iterator end;
         directory_iterator file(p);
 

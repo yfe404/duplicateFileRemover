@@ -3,7 +3,6 @@
 
 #include <string>
 #include <boost/filesystem.hpp>
-//#include <QSqlDatabase>
 #include <QtSql>
 
 /**

@@ -11,8 +11,8 @@ using namespace std;
 /*
   BUGS :
   *quit 'q' ne marche plus
-  *lors du scan des doublons, l'affichage 'open() : fileName' ne marche pas avec les accents
   *CHAQUE fois que la macro DEBUG est appelée, il y a le warning 'database.cpp: avertissement : format not a string literal and no format arguments [-Wformat-security]'
+        => 37 warnings !!
 
   *A NE PAS FAIRE : utiliser 2 lignes 'using namespace ___'
   A FAIRE : 'using namespace boost::filesystem;
@@ -54,15 +54,7 @@ int main(int argc, char* argv[])
     afficheur->menuPrincipal();
 
     delete afficheur;
-    DataBase::instance().fermerDB(); /// comme on a fini de s'en servir, on ferme la base
+    DataBase::instance().fermerDB(); /// comme on a fini de s'en servir, on ferme la base // À BOUGER QUAND ON AURA LA PARTIE GRAPHIQUE (qui s'éxecute après)
 
     return app.exec();
 }
-
-
-
-
-
-
-
-
