@@ -12,8 +12,9 @@
 #define FATAL_ERROR(msg) qFatal(qPrintable(msg))
 #define CRITICAL(msg) qCritical(qPrintable(msg))
 #else
-#define debug(msg)
-#define critical(msg)
+#define DEBUG(msg)
+#define FATAL_ERROR(msg)
+#define CRITICAL(msg)
 #endif
 
 
@@ -380,3 +381,34 @@ void DataBase::rechercherDoublons(std::multimap<std::string, boost::filesystem::
 
 }
 
+
+
+/**
+  @brief Vérifier la validité du fichier de configuration
+
+  @return vrai si le fichier de configuration est valide, faux sinon
+*/
+bool DataBase::verifierConfiguration()
+{
+    DEBUG(QObject::trUtf8("Tentative d'ouverture du fichier de configuration"));
+    ifstream config(CONFIGFILE);
+
+    if(!config)
+    {
+        setLastError(QObject::trUtf8("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
+    }
+
+    string parcours_configfile;
+
+    DEBUG(QObject::trUtf8("Lecture d'une ligne du fichier de configuration"));
+    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
+
+    if(parcours_configfile.size() == 0)
+    {
+        CRITICAL(QObject::trUtf8("Fichier de configuration vide !"));
+        return false;
+    }
+
+    else{}
+
+}

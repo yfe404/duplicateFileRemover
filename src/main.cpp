@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include<fstream>
-#include <QtSql>
+#include <console.h>
 #include <QApplication>
 
 
@@ -52,51 +52,20 @@ int main(int argc, char* argv[])
 
     DataBase::instance().ouvrirDB(); /// On ouvre la base de données principale pour pouvoir ensuite faire des requêtes dessus
 
-   menu();
+    Console* afficheur = new Console();
+    afficheur->menuPrincipal();
+
+    delete afficheur;
+
+
 
    return app.exec();
 }
 
 
 
-void menu()
-{
-    char choix = 'm';
-    multimap<string, boost::filesystem::path*> map;
 
 
-    while(choix!='q')
-    {
-        cout << QObject::trUtf8("Commande (m pour l'aide) : ").toStdString();
-        cin >> choix; // CODERET A GERER (réglerait le problème qui suit ?)  // Problème : si l'utilisateur entre une chaine de caractères, pas géré ! => prend 1car/2 de la chaine (alors qu'il faudrait mettre un message d'erreur !)
-        switch(choix)
-        {
-        case 'd' :
-            DataBase::instance().rechercherDoublons(map);
-        break;
-        case 'u' :
-            DataBase::instance().update();       /// Met à jour la liste des fichiers de la BDD
-        break;
-        case 'm' :
-            afficherAide(); /// Affiche ce menu
-        break;
-        case 'q' :
-            return;         /// Quitte le programme
-        break;
-        default:
-            cout<<choix<<QObject::trUtf8(" : commande inconnue").toStdString()<<endl;  /// Par défaut affiche commande inconnue
-
-        }
-    }
-}
 
 
-void afficherAide()
-{
-    cout << QObject::trUtf8("Commande d'action").toStdString() << endl <<
-    QObject::trUtf8("   d   lister les fichiers qui ont des doublons de taille").toStdString()<< endl <<
-    QObject::trUtf8("   m   afficher ce menu").toStdString() << endl <<
-    QObject::trUtf8("   u   mettre à jour la base de données").toStdString() << endl <<
-    QObject::trUtf8("   q   quitter").toStdString() << endl;
-}
 

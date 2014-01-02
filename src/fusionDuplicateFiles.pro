@@ -18,11 +18,15 @@ TRANSLATIONS += test_database_en.ts
 
 SOURCES += main.cpp \
     database.cpp \
-    extended_filesystem.cpp
+    extended_filesystem.cpp \
+    console.cpp
 
 HEADERS += \
     database.h \
-    extended_filesystem.h
+    extended_filesystem.h \
+    displayer.h \
+    command.h \
+    console.h
 
 # Ajout de la bibliothèque boost
 INCLUDEPATH+=/usr/local/boost_1_55_0

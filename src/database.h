@@ -63,6 +63,9 @@ public:
     bool rollback();
     bool transaction();
     void rechercherDoublons(std::multimap<std::string, boost::filesystem::path *> map);
+    bool verifierConfiguration();
+    void editerConfiguration();
+
 
     ~DataBase();
 };
