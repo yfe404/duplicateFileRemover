@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <QDebug>
+#include <map>
 
 #include "database.h"
 #include "extended_filesystem.h"
@@ -242,80 +243,6 @@ void DataBase::update()
 
 
 
-
-/**
-  @brief liste les éléments de la base de données
-  utilise une requête select puis affiche les pathname de tous les fichiers
-*/
-/// @todo Supprimer cette fonction qui n'aura plus lieu d'être car la console et la GUI on un affichage distinct qui ne
-/// être factorisé par une fonction telle que celle-ci
-
-void DataBase::listerFichiers()
-{
-
-    QSqlQuery select;
-    if( select.exec("SELECT filepath FROM " + QString(TFILES.c_str())) )
-    {
-        while(select.next())
-        {
-            for(int res=0; res < select.record().count(); ++res) /// pour chaque ligne de résultat de la requête...
-                cout << boost::filesystem::path( select.value(res).toString().toStdString() ) << endl;    /// affiche le path
-        }
-    }
-
-}
-
-
-/**
-  @brief liste les éléments de la base de données qui ont des doublons de taille ( 1 fichier par taille )
-*/
-/// @todo cette fonction prendra en paramètre une multimap de la stl, elle remplira la map se détachant ainsi de la tache
-/// d'affichage des résultats, à la charge de l'afficheur (qu'il soit console ou GUI).
-/// Dans un premier temps le résultat pourra être affiché dans cette fonction dans la version debug uniquement.
-void DataBase::listerDoublonsTaille()
-{
-    QSqlQuery selectSize;
-
-    if(selectSize.exec("SELECT COUNT(size) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY size HAVING COUNT(size) > 1" ) )
-    {
-        //cout<<query.record().count()<<endl;
-        while(selectSize.next())
-        {
-            /// Récupération des résultats de la requête sous forme de path
-            boost::filesystem::path file(selectSize.value(1).toString().toStdString());
-
-            //cout << "= > Taille " << file_size(file) << " octets : " << endl;
-
-            QSqlQuery selectEqualSize;
-            selectEqualSize.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE size = ?");
-            selectEqualSize.addBindValue(quint64(file_size(file))); /// taille
-            if(selectEqualSize.exec())
-            {
-                while(selectEqualSize.next())
-                    cout << "\t" + selectEqualSize.value(0).toString().toStdString() << endl;
-            }
-            else
-            {
-
-                // Debug => cout << selectEqualSize.lastQuery().toStdString() << endl;
-                setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectEqualSize.lastError().text()), "Recherche des doublons dans la base"));
-            }
-
-        }
-    }
-
-    else
-        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectSize.lastError().text()), "Recherche des doublons dans la base"));
-}
-
-
-
-
-
-
-
-
-
 /// @todo fusionner les fonctions updateMD5, getListSizeDuplicate, et listerDoublons dans une fonction
 /// rechercherFichiersDoublons(std::map<string, path>& map) avec string la clé md5.
 
@@ -393,47 +320,6 @@ list<boost::filesystem::path *>& DataBase::getListSizeDuplicate()
 
 
 
-
-
-
-/**
-  @brief liste les doublons de la base de données (en fonction de la clé md5)
-*/
-void DataBase::listerDoublons()
-{
-    QSqlQuery selectGroupMd5;
-    if( selectGroupMd5.exec("SELECT COUNT(md5sum) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY md5sum HAVING COUNT(md5sum) > 1" ) )
-    {
-        cout<<selectGroupMd5.lastQuery().toStdString()<<endl;
-        while(selectGroupMd5.next())
-        {
-                boost::filesystem::path p(selectGroupMd5.value(1).toString().toStdString());
-                cout << "= > clé md5 : " << md5sum(p) << " : " << endl; /// affiche la clé md5 pour les doublons trouvés
-
-                QSqlQuery selectDoublons;
-                selectDoublons.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE md5sum = ?");
-                selectDoublons.addBindValue(QString(md5sum(p).c_str())); /// clé md5
-                if(selectDoublons.exec())
-                {
-                    while(selectDoublons.next())
-                        cout << "\t"+selectDoublons.value(0).toString().toStdString() << endl;
-
-                }
-                else
-                {
-                    cout << selectDoublons.lastQuery().toStdString( )<< endl;
-                    cout << selectDoublons.lastError().text().toStdString() << endl;
-                }
-
-        }
-    }
-    else
-        cout << selectGroupMd5.lastError().text().toStdString() << endl;
-
-}
-
-
-
 /**
   @brief Destructeur
 */
@@ -442,3 +328,55 @@ DataBase::~DataBase()
     DEBUG(QObject::trUtf8("Appel du destructeur du singleton DataBase"));
     delete m_databaseobject;
 }
+
+
+void DataBase::rechercherDoublons(std::multimap<std::string, boost::filesystem::path*> map)
+{
+    DEBUG(QObject::trUtf8("Mise à jour des sommes md5 des fichiers de tailles équivalentes"));
+    list<boost::filesystem::path *> dupSize;
+    dupSize = getListSizeDuplicate();
+    DEBUG(QObject::trUtf8("Nombre de sommes md5 à calculer : %n", "", dupSize.size()));
+    updateMD5(dupSize);
+
+    DEBUG(QObject::trUtf8("Recherche de doublons en cours"));
+
+    QSqlQuery selectGroupMd5;
+    if( selectGroupMd5.exec("SELECT COUNT(md5sum) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY md5sum HAVING COUNT(md5sum) > 1" ) )
+    {
+        DEBUG(QObject::trUtf8("Utilisation de la requête : ") + selectGroupMd5.lastQuery());
+
+        while(selectGroupMd5.next())
+        {
+                boost::filesystem::path p(selectGroupMd5.value(1).toString().toStdString());
+                std::string key = md5sum(p);
+                DEBUG(QObject::trUtf8("Nouvelle clé calculée : ") + qPrintable(key.c_str()));
+
+                QSqlQuery selectDoublons;
+                DEBUG(QObject::trUtf8("Récupération des fichiers correspondants"));
+                selectDoublons.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE md5sum = ?");
+                selectDoublons.addBindValue(QString(key.c_str())); /// clé md5
+
+                if(selectDoublons.exec())
+                {
+
+                    while(selectDoublons.next())
+                    {
+                        boost::filesystem::path *fic = new boost::filesystem::path(selectGroupMd5.value(1).toString().toStdString());
+                        Q_ASSERT_X(fic!=NULL, "DataBase::rechercherDoublons()", "fic == NULL");    /// Quitte le programme si le pointeur vaut NULL
+                        map.insert(std::pair<std::string,boost::filesystem::path*> (key, fic));
+                    }
+
+                }
+                else
+                {
+                    setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectDoublons.lastError().text()), "Recherche des doublons dans la base"));
+
+                }
+
+        }
+    }
+    else
+        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectGroupMd5.lastError().text()), "Recherche des doublons dans la base"));
+
+}
+

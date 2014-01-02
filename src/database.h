@@ -47,7 +47,7 @@ public:
 
     void update(); /// met à jour la base de données en fonction du fichier de configuration
 
-    void listerFichiers(); /// liste le contenu de la base
+    /* void listerFichiers(); /// liste le contenu de la base */
     void listerDoublonsTaille(); /// liste les fichiers ayant la même taille
     void listerDoublons(); /// liste les doublons (selon différents critères)
 
@@ -62,6 +62,7 @@ public:
     bool commit();
     bool rollback();
     bool transaction();
+    void rechercherDoublons(std::multimap<std::string, boost::filesystem::path *> map);
 
     ~DataBase();
 };
