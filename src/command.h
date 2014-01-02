@@ -13,19 +13,23 @@ using std::string;
 
 class Command
 {
-public:
-    virtual ~Command();
-
-    virtual void Execute() = 0;
-
 protected:
     Command();
+
+public:
+    virtual void Execute() = 0;
+    virtual ~Command();
+
 };
 
 
 
 class RechercherDoublons : Command
 {
+private :
+    DataBase* m_db;
+    multimap<string, boost::filesystem::path*>* m_map;
+
 public:
     RechercherDoublons(DataBase* db, multimap<string, boost::filesystem::path*>* map)
     {
@@ -37,9 +41,6 @@ public:
     {
         m_db->rechercherDoublons(*m_map);
     }
-private :
-    DataBase* m_db;
-    multimap<string, boost::filesystem::path*>* m_map;
 };
 
 #endif // COMMAND_H

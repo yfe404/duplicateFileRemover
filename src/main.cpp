@@ -7,21 +7,18 @@
 
 
 using namespace std;
-using namespace boost::filesystem;
 
+/*
+  BUGS :
+  *quit 'q' ne marche plus
+  *lors du scan des doublons, l'affichage 'open() : fileName' ne marche pas avec les accents
+  *CHAQUE fois que la macro DEBUG est appelée, il y a le warning 'database.cpp: avertissement : format not a string literal and no format arguments [-Wformat-security]'
 
-
-// PROTOTYPES ET CORPS DE MÉTHODES A BOUGER (dans une classe ?)
-void menu();
-void update();
-void afficherAide();
-void lister();
-void listerDoublons();
-void testMD5();
-
-void test(void);
-
-
+  *A NE PAS FAIRE : utiliser 2 lignes 'using namespace ___'
+  A FAIRE : 'using namespace boost::filesystem;
+                using std::___;
+                using std::___;
+*/
 
 
 int main(int argc, char* argv[])
@@ -35,18 +32,19 @@ int main(int argc, char* argv[])
     QTranslator translator;
 
     int choice;
-    cout<<"Choose a language : 0 for english, 1 for french (default english)."<<endl;
+    cout << "Choose a language : 0 for english, 1 for french (default english). ";
     cin >> choice;
 
     switch(choice)
     {
         case 0 :
-            translator.load(QString("test_database_en"));
+            translator.load(QString("test_database_en")); // PROBLÈME => PAS PRIS EN COMPTE (reste en français)
         break;
         default :
             translator.load(QString("test_database_fr"));
 
     }
+
 
     app.installTranslator(&translator);
 
@@ -56,10 +54,9 @@ int main(int argc, char* argv[])
     afficheur->menuPrincipal();
 
     delete afficheur;
+    DataBase::instance().fermerDB(); /// comme on a fini de s'en servir, on ferme la base
 
-
-
-   return app.exec();
+    return app.exec();
 }
 
 

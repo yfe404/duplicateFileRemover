@@ -24,7 +24,7 @@ using namespace boost::filesystem;
   @returns la clé md5 du fichier
   @return "" chaine vide si erreur
 */
-std::string md5sum(boost::filesystem::path file)
+std::string md5sum(path file)
 {
 
     try{

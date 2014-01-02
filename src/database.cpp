@@ -1,17 +1,20 @@
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <QDebug>
-#include <map>
-
 #include "database.h"
 #include "extended_filesystem.h"
 
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <map>
+
+#include <QDebug>
+#include <boost/filesystem.hpp>
+
 #ifndef QT_NO_DEBUG                         /// indique que l'on est en mode debug
-#define DEBUG(msg) qDebug(qPrintable(msg))
+#define DEBUG(msg) qDebug(qPrintable(msg)) // pt également qDebug() << mess...;
 #define FATAL_ERROR(msg) qFatal(qPrintable(msg))
-#define CRITICAL(msg) qCritical(qPrintable(msg))
-#else
+#define CRITICAL(msg) qCritical(qPrintable(msg)) // pt également qCritical() << mess...;
+
+#else /// ifdef QT_NO_DEBUG
 #define DEBUG(msg)
 #define FATAL_ERROR(msg)
 #define CRITICAL(msg)
@@ -27,8 +30,13 @@
 
 #define CREATE_FILE_DB string("echo  \"CREATE TABLE IF NOT EXISTS " + TFILES  + " (filepath varchar(255) primary key, filename varchar(255), lastmodified varchar(255), size integer, md5sum varchar(255));\" | /usr/bin/sqlite3 " + DATABASE_NAME)
 
-using namespace std;
+
+/// un seul using namespace pour éviter les conflits
 using namespace boost::filesystem;
+
+using std::string;
+using std::list;
+using std::ifstream;
 
 
 
@@ -53,20 +61,27 @@ DataBase::DataBase()
     if(system(CREATE_FILE_DB.c_str()) == -1)
     {
         /// @todo Le programme devra quitter si la base de donnée n'a pas pu être créée.
+        //! Idée : lancer une exception
         FATAL_ERROR(QObject::trUtf8("Echec de création de la base de données", "Constructeur de la base de données"));
         setLastError(QObject::trUtf8("Impossible de créer la base de données, vérifiez que sqlite3 est bien installé sur votre ordinateur."));
         return;
     }
 
+
     /** Paramétrage de la base de données */
+
     DEBUG(QObject::trUtf8("Configuration de la base de données"));
     m_databaseobject->setHostName("localhost");
+
     DEBUG(QObject::trUtf8(qPrintable("Nom d'hôte : " + m_databaseobject->hostName())));
     m_databaseobject->setUserName( QString( getenv("USER")));
+
     DEBUG(QObject::trUtf8(qPrintable("Nom d'utilisateur : " + m_databaseobject->userName())));
     m_databaseobject->setPassword("");
+
     DEBUG(QObject::trUtf8(qPrintable("Mot de passe : " + m_databaseobject->password())));
     m_databaseobject->setDatabaseName( QString(DATABASE_NAME.c_str()) );
+
     DEBUG(QObject::trUtf8(qPrintable("Nom de la base de données : " + m_databaseobject->databaseName())));
 }
 
@@ -87,8 +102,8 @@ void DataBase::ouvrirDB()
 
     if( !m_databaseobject->open() ) /// Appelle la méthode open de QSqlDatabase et retourne la valeur retournée par cette dernière.
     {
-        /// @todo Le programme devra quitter dans ce cas.
-        FATAL_ERROR(QObject::trUtf8("Echec ouverture de la base de données", "ouvrirDB()"));
+        /// @todo Le programme devra quitter dans ce cas. // qFatal quitte automatiquement le programme (en faisant un core dump sous unix)
+        FATAL_ERROR(QObject::trUtf8("Echec ouverture de la base de données", "ouvrirDB()")); /// quitte le programme (via qFatal) en affichant un message d'erreur
         QString err = QObject::trUtf8("Echec ouverture de la base de données : ") + m_databaseobject->lastError().text();
         setLastError(err);
         return ;
@@ -150,7 +165,7 @@ void DataBase::update()
     DEBUG(QObject::trUtf8("Tentative de mise à jour de la base de données", "DataBase::update()"));
 
     DEBUG(QObject::trUtf8("Sélection des dossiers à scanner à l'aide du fichier de configuration"));
-    ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
+    std::ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
 
     if(!config)
     {
@@ -171,12 +186,12 @@ void DataBase::update()
 
     /** Récupération des dossiers sélectionnés, parcours et ajout à notre liste */
 
-    list<boost::filesystem::path*> *lFiles = new list<boost::filesystem::path*>;
+    list<path*> *lFiles = new list<path*>;
     Q_ASSERT_X(lFiles!=NULL, "DataBase::update()", "lFiles == NULL");
 
     while( parcours_configfile.size() != 0 )
     {
-        boost::filesystem::path rep(parcours_configfile);
+        path rep(parcours_configfile);
         DEBUG(QObject::trUtf8(qPrintable("Parcours du dossier " + QString(rep.c_str()))));
 
         /// @todo les vérifications suivantes (lignes commentées doivent êtres insérées dans une fonction qui fera la vérification
@@ -216,7 +231,7 @@ void DataBase::update()
     query.prepare("INSERT OR REPLACE INTO " + QString(TFILES.c_str()) + " values (?, ?, ?, ?, ?)");    /// Insert ou met à jour dans la base si la clé existe déjà
     DEBUG(QObject::trUtf8(qPrintable("Requête lancée : " + query.lastQuery() )));
 
-    for(list<boost::filesystem::path*>::iterator file = lFiles->begin(); file != lFiles->end(); ++file)
+    for(list<path*>::iterator file = lFiles->begin(); file != lFiles->end(); ++file)
     {
             query.addBindValue( (*file)->c_str() ); /// ajout du pathname
             query.addBindValue((*file)->filename().c_str()); /// ajout du filename
@@ -252,19 +267,19 @@ void DataBase::update()
   @brief mise à jour des clés md5
   @param filesToUpdate liste des fichiers de la base dont il faut mettre à jour la valeur de la clé md5
 */
-void DataBase::updateMD5(std::list<boost::filesystem::path *> &filesToUpdate)
+void DataBase::updateMD5(std::list<path *> &filesToUpdate)
 {
     DataBase::instance().transaction(); /// début de la transaction
 
     QSqlQuery update;
-    boost::filesystem::path* fic;
+    path* fic;
 
     /// mise à jour des clés md5 pour les fichiers de la listes
     update.prepare("UPDATE " + QString(TFILES.c_str()) + " SET md5sum=? WHERE filepath=?");
 
-    for(list<boost::filesystem::path*>::iterator it = filesToUpdate.begin(); it != filesToUpdate.end(); ++it)
+    for(list<path*>::iterator it = filesToUpdate.begin(); it != filesToUpdate.end(); ++it)
     {
-        fic = new boost::filesystem::path( (*it)->c_str() );
+        fic = new path( (*it)->c_str() );
         update.addBindValue( QString( md5sum(*fic).c_str() ) ); /// ajout de la clé md5
         update.addBindValue( fic->c_str() ); /// ajout du pathname
         update.exec();
@@ -287,11 +302,11 @@ void DataBase::updateMD5(std::list<boost::filesystem::path *> &filesToUpdate)
 
   @return equalsFile contenant les fichiers de même taille dans la base
 */
-list<boost::filesystem::path *>& DataBase::getListSizeDuplicate()
+list<path *>& DataBase::getListSizeDuplicate()
 {
     QSqlQuery query;
-    list<boost::filesystem::path*> *equalsFile = new list<boost::filesystem::path*>(); // ATTENTION FUITE MÉMOIRE
-    boost::filesystem::path *file;
+    list<path*> *equalsFile = new list<path*>(); // ATTENTION FUITE MÉMOIRE
+    path *file;
 
     if( query.exec("select filepath from " + QString(TFILES.c_str()) + " where size in (select  size from " + QString(TFILES.c_str()) + " group by size having count(size) > 1)") )
     {
@@ -299,7 +314,7 @@ list<boost::filesystem::path *>& DataBase::getListSizeDuplicate()
         while(query.next())
         {
             try{
-                file = new boost::filesystem::path(query.value(0).toString().toStdString());
+                file = new path(query.value(0).toString().toStdString());
                 equalsFile->push_back(file);
                 //cout<<(*liste.begin())->c_str()<<endl;
             }
@@ -321,25 +336,20 @@ list<boost::filesystem::path *>& DataBase::getListSizeDuplicate()
 
 
 
-/**
-  @brief Destructeur
-*/
-DataBase::~DataBase()
-{
-    DEBUG(QObject::trUtf8("Appel du destructeur du singleton DataBase"));
-    delete m_databaseobject;
-}
 
 
-void DataBase::rechercherDoublons(std::multimap<std::string, boost::filesystem::path*> map)
+
+void DataBase::rechercherDoublons(std::multimap<std::string, path*> map)
 {
-    DEBUG(QObject::trUtf8("Mise à jour des sommes md5 des fichiers de tailles équivalentes"));
-    list<boost::filesystem::path *> dupSize;
+    DEBUG(QObject::trUtf8("Mise à jour des clés md5 des fichiers de tailles équivalentes"));
+    list<path *> dupSize;
+
     dupSize = getListSizeDuplicate();
-    DEBUG(QObject::trUtf8("Nombre de sommes md5 à calculer : %n", "", dupSize.size()));
+    DEBUG(QObject::trUtf8("Nombre de clés md5 à calculer : %n", "", dupSize.size()));
+
     updateMD5(dupSize);
 
-    DEBUG(QObject::trUtf8("Recherche de doublons en cours"));
+    DEBUG(QObject::trUtf8("Recherche de doublons en cours..."));
 
     QSqlQuery selectGroupMd5;
     if( selectGroupMd5.exec("SELECT COUNT(md5sum) AS nb_doublon, filepath  FROM " + QString(TFILES.c_str()) +" GROUP BY md5sum HAVING COUNT(md5sum) > 1" ) )
@@ -348,7 +358,7 @@ void DataBase::rechercherDoublons(std::multimap<std::string, boost::filesystem::
 
         while(selectGroupMd5.next())
         {
-                boost::filesystem::path p(selectGroupMd5.value(1).toString().toStdString());
+                path p(selectGroupMd5.value(1).toString().toStdString());
                 std::string key = md5sum(p);
                 DEBUG(QObject::trUtf8("Nouvelle clé calculée : ") + qPrintable(key.c_str()));
 
@@ -362,9 +372,9 @@ void DataBase::rechercherDoublons(std::multimap<std::string, boost::filesystem::
 
                     while(selectDoublons.next())
                     {
-                        boost::filesystem::path *fic = new boost::filesystem::path(selectGroupMd5.value(1).toString().toStdString());
+                        path *fic = new path(selectGroupMd5.value(1).toString().toStdString());
                         Q_ASSERT_X(fic!=NULL, "DataBase::rechercherDoublons()", "fic == NULL");    /// Quitte le programme si le pointeur vaut NULL
-                        map.insert(std::pair<std::string,boost::filesystem::path*> (key, fic));
+                        map.insert(std::pair<std::string,path*> (key, fic));
                     }
 
                 }
@@ -386,7 +396,8 @@ void DataBase::rechercherDoublons(std::multimap<std::string, boost::filesystem::
 /**
   @brief Vérifier la validité du fichier de configuration
 
-  @return vrai si le fichier de configuration est valide, faux sinon
+  @return true si le fichier de configuration est valide
+  @return false sinon
 */
 bool DataBase::verifierConfiguration()
 {
@@ -396,6 +407,7 @@ bool DataBase::verifierConfiguration()
     if(!config)
     {
         setLastError(QObject::trUtf8("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
+        return false;
     }
 
     string parcours_configfile;
@@ -409,6 +421,15 @@ bool DataBase::verifierConfiguration()
         return false;
     }
 
-    else{}
+    return true;
+}
 
+
+/**
+  @brief Destructeur
+*/
+DataBase::~DataBase()
+{
+    DEBUG(QObject::trUtf8("Appel du destructeur du singleton DataBase"));
+    delete m_databaseobject;
 }

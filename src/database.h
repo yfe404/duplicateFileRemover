@@ -3,7 +3,7 @@
 
 #include <string>
 #include <boost/filesystem.hpp>
-#include <QSqlDatabase>
+//#include <QSqlDatabase>
 #include <QtSql>
 
 /**
@@ -12,7 +12,7 @@
 */
 
 class QSqlDatabase;
-class path;
+
 
 class DataBase
 {
@@ -54,8 +54,8 @@ public:
     void updateMD5(std::list<boost::filesystem::path*> &filesToUpdate);
     std::list<boost::filesystem::path *> &getListSizeDuplicate();
 
-    void ouvrirDB(); /// ouverture de la base de données. // (appelle juste la méthode de father donc ok je pense)
-    void fermerDB(); /// fermeture de la base de données. // (appelle juste la méthode de father donc ok je pense)
+    void ouvrirDB(); /// ouverture de la base de données.
+    void fermerDB(); /// fermeture de la base de données.
 
     const QString& lastError();
 
