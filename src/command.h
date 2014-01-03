@@ -1,9 +1,10 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
+#include "database.h"
+
 #include <boost/filesystem.hpp>
 #include <map>
-#include "database.h"
 
 using std::multimap;
 using std::string;
@@ -28,18 +29,18 @@ class RechercherDoublons : Command
 {
 private :
     DataBase* m_db;
-    multimap<string, boost::filesystem::path*>* m_map;
+    multimap<string, boost::filesystem::path*>* m_doublonsFiles;
 
 public:
     RechercherDoublons(DataBase* db, multimap<string, boost::filesystem::path*>* map)
     {
         m_db = db;
-        m_map = map;
+        m_doublonsFiles = map;
     }
 
     virtual void Execute()
     {
-        m_db->rechercherDoublons(*m_map);
+        m_db->rechercherDoublons(*m_doublonsFiles);
     }
 };
 

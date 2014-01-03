@@ -46,12 +46,12 @@ public:
 
     void update(); /// met à jour la base de données en fonction du fichier de configuration
 
-    /* void listerFichiers(); /// liste le contenu de la base */
-    void listerDoublonsTaille(); /// liste les fichiers ayant la même taille
-    void listerDoublons(); /// liste les doublons (selon différents critères)
+    /* void listerFichiers(); // A (RE)FAIRE /// liste le contenu de la base */
+    void listerDoublonsTaille();// A FAIRE /// liste les fichiers ayant la même taille
+    void listerDoublons();// A FAIRE /// liste les doublons (selon différents critères)
 
     void updateMD5(std::list<boost::filesystem::path*> &filesToUpdate);
-    std::list<boost::filesystem::path *> &getListSizeDuplicate();
+    std::list<boost::filesystem::path *> &getListSizeDuplicate(); /// retourne une liste contenant les doublons de taille
 
     void ouvrirDB(); /// ouverture de la base de données.
     void fermerDB(); /// fermeture de la base de données.
@@ -61,9 +61,10 @@ public:
     bool commit();
     bool rollback();
     bool transaction();
-    void rechercherDoublons(std::multimap<std::string, boost::filesystem::path *> map);
+    void rechercherDoublons(std::multimap<std::string, boost::filesystem::path*> &map);
     bool verifierConfiguration();
-    void editerConfiguration();
+
+    void editerConfiguration(); // A FAIRE
 
 
     ~DataBase();

@@ -3,6 +3,11 @@
 
 #include "displayer.h"
 
+/**
+  @class Console héritant de displayer
+  @brief permet l'affichage en mode console
+*/
+
 class Console : public Displayer
 {
 

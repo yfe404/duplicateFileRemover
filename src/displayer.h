@@ -1,8 +1,10 @@
 #ifndef DISPLAYER_H
 #define DISPLAYER_H
 
-/// Classe abstraite d'affichage
-
+/**
+    @class Displayer héritant de QWidget
+    @brief Classe abstraite d'affichage
+*/
 #include <QWidget>
 
 class Displayer : public QWidget

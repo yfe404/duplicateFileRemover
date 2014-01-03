@@ -9,17 +9,20 @@
 #include <QDebug>
 #include <boost/filesystem.hpp>
 
+//#define QT_NO_DEBUG
+
 #ifndef QT_NO_DEBUG                         /// indique que l'on est en mode debug
 #define DEBUG(msg) qDebug(qPrintable(msg)) // pt également qDebug() << mess...;
 #define FATAL_ERROR(msg) qFatal(qPrintable(msg))
 #define CRITICAL(msg) qCritical(qPrintable(msg)) // pt également qCritical() << mess...;
 
-#else /// ifdef QT_NO_DEBUG
+#else /// QT_NO_DEBUG
+// DANS CE CAS, 'd' (doublons) n'affiche plus les fichiers doublons ! (juste les 'open() : _____')
 #define DEBUG(msg)
 #define FATAL_ERROR(msg)
 #define CRITICAL(msg)
-#endif
 
+#endif
 
 
 
@@ -123,7 +126,7 @@ const QString& DataBase::lastError()
     return m_lastError;
 }
 
-void DataBase::setLastError(const QString& msg) /// @todo utiliser C++ 2011 pour éviter la recopie de la chaine passée en paramètre
+void DataBase::setLastError(const QString& msg) /// @todo utiliser C++ 2011 (rvalue&&) pour éviter la recopie de la chaine passée en paramètre
 {
     DEBUG(QObject::trUtf8(qPrintable("DataBase::setLastError : " + msg)));
     m_lastError = msg;
@@ -162,12 +165,12 @@ void DataBase::update()
     DEBUG(QObject::trUtf8("Tentative de mise à jour de la base de données", "DataBase::update()"));
 
     DEBUG(QObject::trUtf8("Sélection des dossiers à scanner à l'aide du fichier de configuration"));
+
+    /** Parcours du fichier de configuration */
     ifstream config(CONFIGFILE); /// création d'un flux pour la manipulation du fichier de configuration
 
     if(!config)
-    {
         setLastError(QObject::trUtf8("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
-    }
 
     string parcours_configfile;
 
@@ -175,7 +178,8 @@ void DataBase::update()
     getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
 
     /// @todo les lignes commentées suivantes seront incluses dans une fonction de vérification du fichier de
-    ///configuration, voir les lignes suivantes pour plus d'informations sur cette fonction.
+    /// configuration, voir les lignes suivantes pour plus d'informations sur cette fonction.
+
     // if(parcours_configfile.size() == 0)
         //cerr<<"Fichier de configuration vide !"<<endl;
 
@@ -253,42 +257,73 @@ void DataBase::update()
     config.close();
 }
 
+/**
+  @brief Vérifier la validité du fichier de configuration
+
+  @return true si le fichier de configuration est valide
+  @return false sinon
+*/
+/// @todo utiliser la méthode dans update (plutôt que de parcourir 2 fois le fichier)
+bool DataBase::verifierConfiguration()
+{
+    DEBUG(QObject::trUtf8("Tentative d'ouverture du fichier de configuration"));
+    ifstream config(CONFIGFILE);
+
+    if(!config)
+    {
+        setLastError( QObject::trUtf8("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème.") );
+        return false;
+    }
+
+    string parcours_configfile;
+
+    DEBUG(QObject::trUtf8("Lecture d'une ligne du fichier de configuration"));
+    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
+
+    if(parcours_configfile.size() == 0)
+    {
+        CRITICAL(QObject::trUtf8("Fichier de configuration vide !"));
+        return false;
+    }
+
+    return true;
+}
 
 
 
-/// @todo fusionner les fonctions updateMD5, getListSizeDuplicate, et listerDoublons dans une fonction
-// APPELER plutôt que fusionner non ? (évite les fonctions trop longues)
-/// rechercherFichiersDoublons(std::map<string, path>& map) avec string la clé md5. // multimap du coup ?
 
 
 /**
   @brief mise à jour des clés md5
+
   @param filesToUpdate liste des fichiers de la base dont il faut mettre à jour la valeur de la clé md5
 */
 void DataBase::updateMD5(list<path *> &filesToUpdate)
 {
     DataBase::instance().transaction(); /// début de la transaction
 
-    QSqlQuery update;
+    QSqlQuery updateMd5;
     path* fic;
 
     /// mise à jour des clés md5 pour les fichiers de la listes
-    update.prepare("UPDATE " + QString(TFILES.c_str()) + " SET md5sum=? WHERE filepath=?");
+    updateMd5.prepare("UPDATE " + QString(TFILES.c_str()) + " SET md5sum=? WHERE filepath=?");
 
     for(list<path*>::iterator it = filesToUpdate.begin(); it != filesToUpdate.end(); ++it)
     {
         fic = new path( (*it)->c_str() );
-        update.addBindValue( QString( md5sum(*fic).c_str() ) ); /// ajout de la clé md5
-        update.addBindValue( fic->c_str() ); /// ajout du pathname
-        update.exec();
+
+        updateMd5.addBindValue( QString( md5sum(*fic).c_str() ) ); /// ajout de la clé md5
+        updateMd5.addBindValue( fic->c_str() ); /// ajout du pathname
+        updateMd5.exec();
         //cout<<requete.executedQuery().toStdString()<<endl;
+
         delete fic;
     }
 
     if(!DataBase::instance().commit())
     {
         DataBase::instance().rollback();
-        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + update.lastError().text()), "Recherche des doublons dans la base"));
+        setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + updateMd5.lastError().text()), "Recherche des doublons dans la base"));
     }
 }
 
@@ -333,19 +368,19 @@ list<path *>& DataBase::getListSizeDuplicate()
 }
 
 
-
-
-
-
-void DataBase::rechercherDoublons(std::multimap<string, path*> map)
+/**
+  @brief recherche les doublons dans la base de données, en fonction de la clé md5 (+ taille)
+  */
+void DataBase::rechercherDoublons(std::multimap<string, path*>& map)
 {
     DEBUG(QObject::trUtf8("Mise à jour des clés md5 des fichiers de tailles équivalentes"));
-    list<path *> dupSize;
 
+    list<path *> dupSize; /// variable utilisée seulement pour afficher le nombre de clés md5 à calculer (rvalue (comme tempo)??)
+    //! @todo une fois que nous ne voudrons plus afficher le nombre de clé md5 à calculer, directement appeler 'updateMDR( getListSizeDuplicate() );'
     dupSize = getListSizeDuplicate();
     DEBUG(QObject::trUtf8("Nombre de clés md5 à calculer : %n", "", dupSize.size()));
 
-    updateMD5(dupSize);
+    updateMD5(dupSize); /// met à jour la clé md5 pour les fichiers de même taille
 
     DEBUG(QObject::trUtf8("Recherche de doublons en cours..."));
 
@@ -355,13 +390,13 @@ void DataBase::rechercherDoublons(std::multimap<string, path*> map)
         DEBUG(QObject::trUtf8("Utilisation de la requête : ") + selectGroupMd5.lastQuery());
 
         while(selectGroupMd5.next())
-        {
+        { //! @todo une fonction dans le while 'foo(path p)'
                 path p(selectGroupMd5.value(1).toString().toStdString());
                 string key = md5sum(p);
                 DEBUG(QObject::trUtf8("Nouvelle clé calculée : ") + qPrintable(key.c_str()));
 
                 QSqlQuery selectDoublons;
-                DEBUG(QObject::trUtf8("Récupération des fichiers correspondants"));
+                DEBUG(QObject::trUtf8("Récupération des fichiers correspondants..."));
                 selectDoublons.prepare("SELECT filepath FROM " + QString(TFILES.c_str()) + " WHERE md5sum = ?");
                 selectDoublons.addBindValue(QString(key.c_str())); /// clé md5
 
@@ -379,7 +414,6 @@ void DataBase::rechercherDoublons(std::multimap<string, path*> map)
                 else
                 {
                     setLastError(QObject::trUtf8(qPrintable("Erreur d'accès à la base de donnée " + selectDoublons.lastError().text()), "Recherche des doublons dans la base"));
-
                 }
 
         }
@@ -391,37 +425,7 @@ void DataBase::rechercherDoublons(std::multimap<string, path*> map)
 
 
 
-/**
-  @brief Vérifier la validité du fichier de configuration
 
-  @return true si le fichier de configuration est valide
-  @return false sinon
-*/
-/// @todo utiliser la méthode dans update (plutôt que de parcourir 2 fois le fichier)
-bool DataBase::verifierConfiguration()
-{
-    DEBUG(QObject::trUtf8("Tentative d'ouverture du fichier de configuration"));
-    ifstream config(CONFIGFILE);
-
-    if(!config)
-    {
-        setLastError(QObject::trUtf8("Erreur ouverture fichier de configuration, veuillez choisir 'Configurer' dans le menu principal pour remédier à ce problème."));
-        return false;
-    }
-
-    string parcours_configfile;
-
-    DEBUG(QObject::trUtf8("Lecture d'une ligne du fichier de configuration"));
-    getline(config, parcours_configfile); /// récupère une ligne du fichier de configuration
-
-    if(parcours_configfile.size() == 0)
-    {
-        CRITICAL(QObject::trUtf8("Fichier de configuration vide !"));
-        return false;
-    }
-
-    return true;
-}
 
 
 /**

@@ -28,13 +28,9 @@ std::string md5sum(path file)
 {
 
     try{
+        int file_descript;     /// Descripteur de fichier correpondant à file
 
-        QCryptographicHash result(QCryptographicHash::Md5);
-
-        int file_descript;     /// Descripteur de fichier correpondant au Path
-
-
-        if( (file_descript = open(file.c_str(), O_RDONLY)) < 0)  /// ouverture du fichier en lecture seule
+        if( (file_descript = open(file.c_str(), O_RDONLY)) < 0)  /// le fichier doit être ouvert pour que l'on puisse calculer sa clé md5
         {
             std::cerr << "open() : " << file.c_str() << std::endl; // NE MARCHE PAS AVEC LES ACCENTS (pour l'affichage)
             return "";
@@ -56,6 +52,7 @@ std::string md5sum(path file)
             throw std::runtime_error("");               /// On quitte par le gestionnaire d'exceptions
         }
 
+        QCryptographicHash result(QCryptographicHash::Md5);
         result.addData(file_buffer, file_size(file));  /// ajout des données à "hasher"
 
 
